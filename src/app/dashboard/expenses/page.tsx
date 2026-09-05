@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { money } from "@/lib/fx";
 import { getExpenses } from "./actions";
+import { MediaGrid } from "@/components/media-grid";
 
 export default async function ExpensesPage() {
   const expenses = await getExpenses();
@@ -48,6 +49,7 @@ export default async function ExpensesPage() {
                 <th className="px-5 py-3.5">Description</th>
                 <th className="px-5 py-3.5">Amount</th>
                 <th className="px-5 py-3.5">Vendor</th>
+                <th className="px-5 py-3.5">Receipt</th>
               </tr>
             </thead>
             <tbody>
@@ -69,11 +71,16 @@ export default async function ExpensesPage() {
                   <td className="px-5 py-4 text-slate-600">{expense.description || "—"}</td>
                   <td className="px-5 py-4 font-medium text-slate-800">{money(expense.amount, expense.currency)}</td>
                   <td className="px-5 py-4 text-slate-500">{expense.vendor || "—"}</td>
+                  <td className="px-5 py-4">
+                    {expense.receiptUrl ? (
+                      <MediaGrid items={[{ id: expense.id, url: expense.receiptUrl, mime: expense.receiptUrl.match(/^data:([^;]+);/)?.[1], caption: expense.description }]} />
+                    ) : <span className="text-slate-400">—</span>}
+                  </td>
                 </tr>
               ))}
               {!expenses.length && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center text-sm text-slate-400">
+                  <td colSpan={7} className="px-5 py-16 text-center text-sm text-slate-400">
                     No expenses yet. <Link href="/dashboard/expenses/new" className="text-indigo-500 hover:underline">Add one</Link>.
                   </td>
                 </tr>
