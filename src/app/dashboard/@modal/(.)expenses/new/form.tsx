@@ -1,9 +1,10 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
+import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createExpense } from "@/app/dashboard/expenses/actions";
 import { EXPENSE_CATEGORIES } from "@/app/dashboard/expenses/constants";
 
@@ -23,11 +24,13 @@ export function NewExpenseForm({ properties }: { properties: { id: string; label
     defaultValues: { date: new Date().toISOString().slice(0, 10) },
   });
   const [pending, startTransition] = useTransition();
+  const [receipt, setReceipt] = useState<MediaFile[]>([]);
   const router = useRouter();
 
   function onSubmit(data: ExpenseFormValues) {
     const fd = new FormData();
     Object.entries(data).forEach(([k, v]) => v != null && fd.append(k, String(v)));
+    if (receipt[0]) fd.append("receipt", receipt[0].file);
     startTransition(async () => { await createExpense(fd); router.back(); });
   }
 
@@ -72,6 +75,15 @@ export function NewExpenseForm({ properties }: { properties: { id: string; label
             <input id="date" type="date" className={inp} {...register("date")} />
           </div>
         </div>
+
+        <MediaUpload
+          value={receipt}
+          onChange={(files) => setReceipt(files.slice(-1))}
+          accept="image/*,video/*,application/pdf"
+          maxFiles={1}
+          maxMB={50}
+          label="Receipt / Document"
+        />
 
         <div className="flex gap-3 pt-2">
           <button type="submit" disabled={pending}

@@ -33,18 +33,27 @@ export async function createTenant(formData: FormData) {
     throw new Error("Name, phone and property are required.");
   }
 
-  await db.insert(tenants).values({
+  const [tenant] = await db.insert(tenants).values({
     name,
     phone,
     propertyId,
     monthlyRent,
     securityDeposit,
     email: (formData.get("email") as string) || null,
-  });
+  }).returning();
+
+  // Store any attached documents as base64 in the documents table
+  const files = formData.getAll("documents").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length > 0) {
+    const { documents: docsTable } = await import("@/db/schema");
+    for (const file of files) {
+      const base64 = `data:${file.type || "application/octet-stream"};base64,${Buffer.from(await file.arrayBuffer()).toString("base64")}`;
+      await db.insert(docsTable).values({ propertyId, name: file.name, url: base64, mimeType: file.type || null });
+    }
+  }
 
   revalidatePath("/dashboard/tenants");
   revalidatePath("/dashboard");
-  redirect("/dashboard/tenants");
 }
 
 export async function updateTenant(id: string, formData: FormData) {

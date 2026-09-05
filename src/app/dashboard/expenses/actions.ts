@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { expenses } from "@/db/schema";
@@ -34,7 +33,6 @@ export async function createExpense(formData: FormData) {
   revalidatePath("/dashboard/expenses");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/reports");
-  redirect("/dashboard/expenses");
 }
 
 export async function deleteExpense(id: string) {

@@ -1,4 +1,5 @@
 import { db } from "./index";
+import { eq } from "drizzle-orm";
 import {
   propertyTypes,
   properties,
@@ -8,7 +9,39 @@ import {
   rentObligations,
   payments,
   expenses,
+  propertyPhotos,
+  documents,
 } from "./schema";
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Tiny coloured SVG encoded as a base64 image/svg+xml data URI */
+function svgPhoto(label: string, bg: string, fg = "#fff") {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="${bg}"/><text x="200" y="160" font-family="sans-serif" font-size="28" fill="${fg}" text-anchor="middle" dominant-baseline="middle">${label}</text></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+/** Minimal valid single-page PDF as a base64 data URI */
+function minimalPdf(title: string) {
+  const content = `%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<</Font<</F1 4 0 R>>>>>>
+endobj
+4 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj
+5 0 obj<</Length 44>>stream
+BT /F1 18 Tf 72 720 Td (${title.slice(0, 30)}) Tj ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+trailer<</Size 6/Root 1 0 R>>
+startxref
+0
+%%EOF`;
+  return `data:application/pdf;base64,${Buffer.from(content).toString("base64")}`;
+}
 
 async function seed() {
   console.log("🌱 Seeding…");
@@ -191,6 +224,47 @@ async function seed() {
     { propertyId: abuja.id,  category: "UTILITIES",      description: "Solar inverter maintenance",       amount: 310_000,   expenseDate: new Date(`${y}-02-14`), vendor: "SolarMax NG" },
     { propertyId: ibeju.id,  category: "OTHER",          description: "Survey & beaconing renewal",       amount: 250_000,   expenseDate: new Date(`${y}-01-08`), vendor: "Surveyor Adebayo" },
   ]);
+
+  // ── Property photos & videos ────────────────────────────────────────────────
+  await db.insert(propertyPhotos).values([
+    // Lekki
+    { propertyId: lekki.id, url: svgPhoto("Lekki — Front Gate",    "#1e3a5f"), caption: "Front gate" },
+    { propertyId: lekki.id, url: svgPhoto("Lekki — Block A",       "#2d6a4f"), caption: "Block A exterior" },
+    { propertyId: lekki.id, url: svgPhoto("Lekki — Pool Area",     "#0077b6"), caption: "Swimming pool" },
+    { propertyId: lekki.id, url: svgPhoto("Lekki — Living Room",   "#6d4c41"), caption: "Sample living room" },
+    // VI
+    { propertyId: vi.id,   url: svgPhoto("VI — Lobby",             "#37474f"), caption: "Ground floor lobby" },
+    { propertyId: vi.id,   url: svgPhoto("VI — Floor 1 Office",    "#4a148c"), caption: "Floor 1 open plan" },
+    { propertyId: vi.id,   url: svgPhoto("VI — Rooftop",           "#bf360c"), caption: "Rooftop terrace" },
+    // Abuja
+    { propertyId: abuja.id, url: svgPhoto("Maitama — Exterior",    "#1b5e20"), caption: "Building exterior" },
+    { propertyId: abuja.id, url: svgPhoto("Maitama — Master Bed",  "#880e4f"), caption: "Master bedroom" },
+    { propertyId: abuja.id, url: svgPhoto("Maitama — Kitchen",     "#e65100"), caption: "Kitchen" },
+    // Ibeju land
+    { propertyId: ibeju.id, url: svgPhoto("Ibeju — Plot Overview", "#827717"), caption: "Aerial plot view" },
+    { propertyId: ibeju.id, url: svgPhoto("Ibeju — Survey Beacon", "#4e342e"), caption: "Survey beacon" },
+  ]);
+
+  // ── Property documents ───────────────────────────────────────────────────────
+  await db.insert(documents).values([
+    { propertyId: lekki.id,  name: "Certificate of Occupancy",   url: minimalPdf("C of O — Lekki Phase 1"),        mimeType: "application/pdf" },
+    { propertyId: lekki.id,  name: "Building Approval",          url: minimalPdf("Building Approval — Lekki"),     mimeType: "application/pdf" },
+    { propertyId: vi.id,     name: "Deed of Assignment",         url: minimalPdf("Deed of Assignment — VI"),       mimeType: "application/pdf" },
+    { propertyId: vi.id,     name: "Fire Safety Certificate",    url: minimalPdf("Fire Safety Cert — VI"),         mimeType: "application/pdf" },
+    { propertyId: abuja.id,  name: "Certificate of Occupancy",   url: minimalPdf("C of O — Maitama"),              mimeType: "application/pdf" },
+    { propertyId: ibeju.id,  name: "Survey Plan",                url: minimalPdf("Survey Plan — Ibeju-Lekki"),     mimeType: "application/pdf" },
+    { propertyId: ibeju.id,  name: "Certificate of Occupancy",   url: minimalPdf("C of O — Ibeju-Lekki"),         mimeType: "application/pdf" },
+  ]);
+
+  // ── Expense receipts ─────────────────────────────────────────────────────────
+  const allExpenses = await db.query.expenses.findMany();
+  for (const [i, expense] of allExpenses.entries()) {
+    const colours = ["#b71c1c", "#1a237e", "#1b5e20", "#e65100", "#4a148c", "#006064"];
+    const receiptUrl = i % 3 === 0
+      ? minimalPdf(`Receipt — ${expense.description.slice(0, 25)}`)
+      : svgPhoto(`Receipt\n${expense.amount.toLocaleString()}`, colours[i % colours.length]);
+    await db.update(expenses).set({ receiptUrl }).where(eq(expenses.id, expense.id));
+  }
 
   console.log("✅ Seed complete");
   console.log(`   ${leaseRows.length} leases`);

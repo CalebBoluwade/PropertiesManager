@@ -1,18 +1,17 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
+import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createTenant } from "@/app/dashboard/tenants/actions";
 
 type TenantFormValues = {
   name: string;
   email?: string;
   phone: string;
-  unitId: string;
-  leaseStart: string;
-  leaseEnd?: string;
+  propertyId: string;
   monthlyRent?: number;
   securityDeposit?: number;
 };
@@ -20,14 +19,16 @@ type TenantFormValues = {
 const inp = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-colors";
 const lbl = "block text-sm font-medium text-slate-700";
 
-export function NewTenantForm({ units }: { units: { id: string; label: string }[] }) {
+export function NewTenantForm({ properties }: { properties: { id: string; name: string }[] }) {
   const { register, handleSubmit, formState: { errors } } = useForm<TenantFormValues>();
   const [pending, startTransition] = useTransition();
+  const [docs, setDocs] = useState<MediaFile[]>([]);
   const router = useRouter();
 
   function onSubmit(data: TenantFormValues) {
     const fd = new FormData();
     Object.entries(data).forEach(([k, v]) => v != null && fd.append(k, String(v)));
+    docs.forEach(({ file }) => fd.append("documents", file));
     startTransition(async () => { await createTenant(fd); router.back(); });
   }
 
@@ -55,26 +56,13 @@ export function NewTenantForm({ units }: { units: { id: string; label: string }[
             {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone.message}</p>}
           </div>
           <div>
-            <label htmlFor="unitId" className={lbl}>Unit *</label>
-            <select id="unitId" className={inp} {...register("unitId", { required: "Required" })}>
-              <option value="">Select vacant unit</option>
-              {units.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
+            <label htmlFor="propertyId" className={lbl}>Property *</label>
+            <select id="propertyId" className={inp} {...register("propertyId", { required: "Required" })}>
+              <option value="">Select property</option>
+              {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            {errors.unitId && <p className="mt-1 text-xs text-red-500">{errors.unitId.message}</p>}
-            {units.length === 0 && <p className="mt-1 text-xs text-amber-500">No vacant units available.</p>}
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="leaseStart" className={lbl}>Lease Start *</label>
-            <input id="leaseStart" type="date" className={inp}
-              {...register("leaseStart", { required: "Required" })} />
-            {errors.leaseStart && <p className="mt-1 text-xs text-red-500">{errors.leaseStart.message}</p>}
-          </div>
-          <div>
-            <label htmlFor="leaseEnd" className={lbl}>Lease End</label>
-            <input id="leaseEnd" type="date" className={inp} {...register("leaseEnd")} />
+            {errors.propertyId && <p className="mt-1 text-xs text-red-500">{errors.propertyId.message}</p>}
+            {properties.length === 0 && <p className="mt-1 text-xs text-amber-500">No properties found.</p>}
           </div>
         </div>
 
@@ -90,6 +78,15 @@ export function NewTenantForm({ units }: { units: { id: string; label: string }[
               {...register("securityDeposit", { valueAsNumber: true })} />
           </div>
         </div>
+
+        <MediaUpload
+          value={docs}
+          onChange={setDocs}
+          accept="image/*,application/pdf"
+          maxFiles={5}
+          maxMB={10}
+          label="Documents (ID, lease agreement, etc.)"
+        />
 
         <div className="flex gap-3 pt-2">
           <button type="submit" disabled={pending}

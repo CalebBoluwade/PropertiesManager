@@ -69,9 +69,16 @@ export async function createPayment(formData: FormData) {
     notes: (formData.get("notes") as string) || null,
   });
 
-  revalidatePath("/payments");
-  revalidatePath("/");
-  redirect("/payments");
+  // Store proof of payment as a document
+  const proofFile = formData.get("proof");
+  if (proofFile instanceof File && proofFile.size > 0) {
+    const { documents: docsTable } = await import("@/db/schema");
+    const base64 = `data:${proofFile.type || "application/octet-stream"};base64,${Buffer.from(await proofFile.arrayBuffer()).toString("base64")}`;
+    await db.insert(docsTable).values({ propertyId: lease.propertyId, name: proofFile.name || "Proof of payment", url: base64, mimeType: proofFile.type || null });
+  }
+
+  revalidatePath("/dashboard/payments");
+  revalidatePath("/dashboard");
 }
 
 export async function recordPayment(id: string, formData: FormData) {

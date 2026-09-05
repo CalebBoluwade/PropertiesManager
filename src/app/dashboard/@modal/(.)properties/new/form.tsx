@@ -1,10 +1,10 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useTransition, useState, useRef } from "react";
+import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
 import { Modal } from "@/components/modal";
+import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createProperty } from "@/app/dashboard/properties/actions";
 import { uploadPhotos } from "@/app/photos/actions";
 
@@ -24,37 +24,20 @@ type PropertyFormValues = {
 const inp = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-colors";
 const lbl = "block text-sm font-medium text-slate-700";
 
-export function NewPropertyForm({ propertyTypes }: { propertyTypes: { id: string; name: string }[] }) {
+export function NewPropertyForm({ propertyTypes }: Readonly<{ propertyTypes: { id: string; name: string }[] }>) {
   const { register, handleSubmit, formState: { errors } } = useForm<PropertyFormValues>();
   const [pending, startTransition] = useTransition();
-  const [previews, setPreviews] = useState<{ url: string; file: File }[]>([]);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [media, setMedia] = useState<MediaFile[]>([]);
   const router = useRouter();
-  const MAX_FILES = 10, MAX_MB = 5;
-
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setUploadError(null);
-    const files = Array.from(e.target.files ?? []);
-    const oversized = files.find((f) => f.size > MAX_MB * 1024 * 1024);
-    if (oversized) { setUploadError(`"${oversized.name}" exceeds ${MAX_MB} MB.`); e.target.value = ""; return; }
-    if (previews.length + files.length > MAX_FILES) { setUploadError(`Maximum ${MAX_FILES} photos.`); e.target.value = ""; return; }
-    setPreviews((p) => [...p, ...files.map((file) => ({ url: URL.createObjectURL(file), file }))]);
-    e.target.value = "";
-  }
-
-  function removePreview(i: number) {
-    setPreviews((p) => { URL.revokeObjectURL(p[i].url); return p.filter((_, j) => j !== i); });
-  }
 
   function onSubmit(data: PropertyFormValues) {
     const fd = new FormData();
     Object.entries(data).forEach(([k, v]) => v != null && fd.append(k, String(v)));
     startTransition(async () => {
       const propertyId = await createProperty(fd);
-      if (previews.length > 0) {
+      if (media.length > 0) {
         const photoFd = new FormData();
-        previews.forEach(({ file }) => photoFd.append("photos", file));
+        media.forEach(({ file }) => photoFd.append("photos", file));
         await uploadPhotos(propertyId, photoFd);
       }
       router.push(`/dashboard/properties/${propertyId}`);
@@ -121,28 +104,14 @@ export function NewPropertyForm({ propertyTypes }: { propertyTypes: { id: string
             {...register("currentValue", { valueAsNumber: true })} />
         </div>
 
-        <div>
-          <span className={lbl}>Photos <span className="text-slate-400 font-normal">(max {MAX_FILES}, {MAX_MB} MB each)</span></span>
-          {uploadError && <p className="mt-1 text-xs text-red-500">{uploadError}</p>}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {previews.map(({ url }, i) => (
-              <div key={url} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="h-full w-full object-cover" />
-                <button type="button" onClick={() => removePreview(i)}
-                  className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80">
-                  <X size={11} />
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={() => fileInputRef.current?.click()}
-              disabled={previews.length >= MAX_FILES}
-              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-xl text-slate-300 hover:border-slate-300 hover:text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed">
-              +
-            </button>
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onFileChange} />
-        </div>
+        <MediaUpload
+          value={media}
+          onChange={setMedia}
+          accept="image/*,video/*"
+          maxFiles={10}
+          maxMB={50}
+          label="Photos & Videos"
+        />
 
         <div className="flex gap-3 pt-2">
           <button type="submit" disabled={pending}
