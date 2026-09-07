@@ -28,6 +28,8 @@ export async function createTenant(formData: FormData) {
   const propertyId = String(formData.get("propertyId") || "");
   const monthlyRent = Number(formData.get("monthlyRent") || 0);
   const securityDeposit = Number(formData.get("securityDeposit") || 0);
+  const moveInDateRaw = formData.get("moveInDate") as string | null;
+  const moveOutDateRaw = formData.get("moveOutDate") as string | null;
 
   if (!name || !phone || !propertyId) {
     throw new Error("Name, phone and property are required.");
@@ -40,6 +42,8 @@ export async function createTenant(formData: FormData) {
     monthlyRent,
     securityDeposit,
     email: (formData.get("email") as string) || null,
+    moveInDate: moveInDateRaw ? new Date(moveInDateRaw) : null,
+    moveOutDate: moveOutDateRaw ? new Date(moveOutDateRaw) : null,
   }).returning();
 
   // Store any attached documents as base64 in the documents table
@@ -59,6 +63,8 @@ export async function createTenant(formData: FormData) {
 export async function updateTenant(id: string, formData: FormData) {
   const monthlyRent = Number(formData.get("monthlyRent") || 0);
   const securityDeposit = Number(formData.get("securityDeposit") || 0);
+  const moveInDateRaw = formData.get("moveInDate") as string | null;
+  const moveOutDateRaw = formData.get("moveOutDate") as string | null;
 
   await db
     .update(tenants)
@@ -69,6 +75,8 @@ export async function updateTenant(id: string, formData: FormData) {
       propertyId: String(formData.get("propertyId") || ""),
       monthlyRent,
       securityDeposit,
+      moveInDate: moveInDateRaw ? new Date(moveInDateRaw) : null,
+      moveOutDate: moveOutDateRaw ? new Date(moveOutDateRaw) : null,
     })
     .where(eq(tenants.id, id));
 

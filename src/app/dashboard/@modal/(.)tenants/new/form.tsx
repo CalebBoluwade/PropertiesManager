@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createTenant } from "@/app/dashboard/tenants/actions";
+import { FormActions } from "@/components/form-actions";
 
 type TenantFormValues = {
   name: string;
@@ -14,6 +15,8 @@ type TenantFormValues = {
   propertyId: string;
   monthlyRent?: number;
   securityDeposit?: number;
+  moveInDate?: string;
+  moveOutDate?: string;
 };
 
 const inp = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-colors";
@@ -79,6 +82,17 @@ export function NewTenantForm({ properties }: { properties: { id: string; name: 
           </div>
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="moveInDate" className={lbl}>Move-in Date</label>
+            <input id="moveInDate" type="date" className={inp} {...register("moveInDate")} />
+          </div>
+          <div>
+            <label htmlFor="moveOutDate" className={lbl}>Move-out Date</label>
+            <input id="moveOutDate" type="date" className={inp} {...register("moveOutDate")} />
+          </div>
+        </div>
+
         <MediaUpload
           value={docs}
           onChange={setDocs}
@@ -88,16 +102,7 @@ export function NewTenantForm({ properties }: { properties: { id: string; name: 
           label="Documents (ID, lease agreement, etc.)"
         />
 
-        <div className="flex gap-3 pt-2">
-          <button type="submit" disabled={pending}
-            className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 transition-colors">
-            {pending ? "Creating…" : "Create Tenant"}
-          </button>
-          <button type="button" onClick={() => router.back()}
-            className="rounded-lg border border-slate-200 px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancel
-          </button>
-        </div>
+        <FormActions pending={pending} submitLabel="Create Tenant" pendingLabel="Creating…" onCancel={() => router.back()} />
       </form>
     </Modal>
   );

@@ -15,6 +15,13 @@
       "when": 1788342600000,
       "tag": "0001_add_country_unit_type",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788342700000,
+      "tag": "0002_add_tenant_dates",
+      "breakpoints": true
     }
   ]
 }

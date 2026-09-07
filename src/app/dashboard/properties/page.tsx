@@ -3,15 +3,25 @@ import { db } from "@/db";
 import { money } from "@/lib/fx";
 import { getDataMode } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
+import { SearchInput } from "@/components/search-input";
+import { Suspense } from "react";
 
-export default async function PropertiesPage() {
+export default async function PropertiesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
   const isDemo = (await getDataMode()) === "demo";
-  const properties = isDemo
+  const allProperties = isDemo
     ? DEMO.properties
     : await db.query.properties.findMany({
         with: { propertyType: true, units: true },
         orderBy: (properties, { desc }) => desc(properties.createdAt),
       });
+  const properties = q
+    ? allProperties.filter((p) =>
+        [p.name, p.address, p.city, p.state, p.status].some((v) =>
+          v?.toLowerCase().includes(q.toLowerCase())
+        )
+      )
+    : allProperties;
 
   return (
     <div className="space-y-6">
@@ -20,12 +30,17 @@ export default async function PropertiesPage() {
           <h1 className="text-[1.6rem] font-bold text-slate-900 tracking-tight leading-none">Properties</h1>
           <p className="mt-1.5 text-sm text-slate-400">Manage your property portfolio.</p>
         </div>
-        <Link
-          href="/dashboard/properties/new"
-          className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
-        >
-          + Add Property
-        </Link>
+        <div className="flex items-center gap-3">
+          <Suspense>
+            <SearchInput placeholder="Search properties..." />
+          </Suspense>
+          <Link
+            href="/dashboard/properties/new"
+            className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+          >
+            + Add Property
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs">

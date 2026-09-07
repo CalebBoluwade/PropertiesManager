@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, gte, lt } from "drizzle-orm";
 import { db } from "@/db";
-import { payments, leases, rentObligations } from "@/db/schema";
+import { payments, leases, rentObligations, tenants, units, properties } from "@/db/schema";
 import { getPaymentStatus } from "@/lib/fx";
 
 export async function getPayments() {
@@ -45,11 +45,22 @@ export async function getPayment(id: string) {
 /** Active leases with their unit/property for billing forms. */
 export async function getActiveTenantsForBilling() {
   const today = new Date();
-  const rows = await db.query.leases.findMany({
-    where: eq(leases.status, "ACTIVE"),
-    with: { tenant: true, unit: { with: { property: true } } },
-    orderBy: (l, { asc }) => [asc(l.tenantId)],
-  });
+  const rows = await db
+    .select({
+      id: leases.id,
+      endDate: leases.endDate,
+      tenantId: leases.tenantId,
+      tenantName: tenants.name,
+      unitId: units.id,
+      unitNumber: units.unitNumber,
+      propertyId: properties.id,
+      propertyName: properties.name,
+    })
+    .from(leases)
+    .innerJoin(tenants, eq(leases.tenantId, tenants.id))
+    .innerJoin(units, eq(leases.unitId, units.id))
+    .innerJoin(properties, eq(leases.propertyId, properties.id))
+    .where(eq(leases.status, "ACTIVE"));
   return rows.filter((l) => l.endDate >= today);
 }
 

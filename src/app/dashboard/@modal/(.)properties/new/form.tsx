@@ -8,6 +8,7 @@ import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createProperty } from "@/app/dashboard/properties/actions";
 import { uploadPhotos } from "@/app/photos/actions";
 import { COUNTRIES } from "@/lib/countries";
+import { FormActions } from "@/components/form-actions";
 
 const RESIDENTIAL_UNIT_TYPES = ["Studio","1 Bedroom","2 Bedroom","3 Bedroom","4 Bedroom","5+ Bedroom","Duplex","Penthouse","Self-Contain"];
 const COMMERCIAL_UNIT_TYPES = ["Open Plan Office","Private Office","Shop","Warehouse","Showroom","Restaurant Space","Co-working Space","Storage Unit"];
@@ -146,16 +147,7 @@ export function NewPropertyForm({ propertyTypes }: Readonly<{ propertyTypes: { i
           label="Photos & Videos"
         />
 
-        <div className="flex gap-3 pt-2">
-          <button type="submit" disabled={pending}
-            className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 transition-colors">
-            {pending ? "Creating…" : "Create Property"}
-          </button>
-          <button type="button" onClick={() => router.back()}
-            className="rounded-lg border border-slate-200 px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancel
-          </button>
-        </div>
+        <FormActions pending={pending} submitLabel="Create Property" pendingLabel="Creating…" onCancel={() => router.back()} />
       </form>
     </Modal>
   );

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { updateProperty } from "@/app/dashboard/properties/actions";
 import { COUNTRIES } from "@/lib/countries";
+import { FormActions } from "@/components/form-actions";
 
 type PropertyFormValues = {
   name: string;
@@ -100,16 +101,7 @@ export function EditPropertyForm({ property, propertyTypes }: { property: Proper
           </div>
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <button type="submit" disabled={pending}
-            className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 transition-colors">
-            {pending ? "Saving…" : "Save Changes"}
-          </button>
-          <button type="button" onClick={() => router.back()}
-            className="rounded-lg border border-slate-200 px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancel
-          </button>
-        </div>
+        <FormActions pending={pending} submitLabel="Save Changes" pendingLabel="Saving…" onCancel={() => router.back()} />
       </form>
     </Modal>
   );

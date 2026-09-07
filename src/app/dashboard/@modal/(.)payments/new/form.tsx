@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createPayment } from "@/app/dashboard/payments/actions";
+import { FormActions } from "@/components/form-actions";
+
+type Unit = { id: string; number: string; leases: { id: string; tenantName: string }[] };
+type Property = { id: string; name: string; units: Unit[] };
 
 type PaymentFormValues = {
   leaseId: string;
@@ -17,15 +21,18 @@ type PaymentFormValues = {
 const inp = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-colors";
 const lbl = "block text-sm font-medium text-slate-700";
 
-type Lease = { id: string; label: string };
-
-export function NewPaymentForm({ leases }: { leases: Lease[] }) {
-  const { register, handleSubmit, formState: { errors } } = useForm<PaymentFormValues>({
+export function NewPaymentForm({ properties }: { properties: Property[] }) {
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<PaymentFormValues>({
     defaultValues: { amount: 0, paidDate: new Date().toISOString().slice(0, 10) },
   });
   const [pending, startTransition] = useTransition();
   const [proof, setProof] = useState<MediaFile[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
   const router = useRouter();
+
+  const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
+  const selectedUnit = selectedProperty?.units.find((u) => u.id === selectedUnitId);
 
   function onSubmit(data: PaymentFormValues) {
     const fd = new FormData();
@@ -38,14 +45,40 @@ export function NewPaymentForm({ leases }: { leases: Lease[] }) {
     <Modal title="Record Payment">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label htmlFor="leaseId" className={lbl}>Lease *</label>
-          <select id="leaseId" className={inp} {...register("leaseId", { required: "Required" })}>
-            <option value="">Select lease</option>
-            {leases.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+          <label className={lbl}>Property *</label>
+          <select className={inp} value={selectedPropertyId} onChange={(e) => {
+            setSelectedPropertyId(e.target.value);
+            setSelectedUnitId("");
+            setValue("leaseId", "");
+          }}>
+            <option value="">Select property</option>
+            {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          {errors.leaseId && <p className="mt-1 text-xs text-red-500">{errors.leaseId.message}</p>}
-          {leases.length === 0 && <p className="mt-1 text-xs text-amber-500">No active leases found.</p>}
         </div>
+
+        {selectedPropertyId && (
+          <div>
+            <label className={lbl}>Unit *</label>
+            <select className={inp} value={selectedUnitId} onChange={(e) => {
+              setSelectedUnitId(e.target.value);
+              setValue("leaseId", "");
+            }}>
+              <option value="">Select unit</option>
+              {selectedProperty!.units.map((u) => <option key={u.id} value={u.id}>{u.number}</option>)}
+            </select>
+          </div>
+        )}
+
+        {selectedUnitId && (
+          <div>
+            <label htmlFor="leaseId" className={lbl}>Tenant *</label>
+            <select id="leaseId" className={inp} {...register("leaseId", { required: "Required" })}>
+              <option value="">Select tenant</option>
+              {selectedUnit!.leases.map((l) => <option key={l.id} value={l.id}>{l.tenantName}</option>)}
+            </select>
+            {errors.leaseId && <p className="mt-1 text-xs text-red-500">{errors.leaseId.message}</p>}
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -76,16 +109,7 @@ export function NewPaymentForm({ leases }: { leases: Lease[] }) {
           label="Proof of Payment"
         />
 
-        <div className="flex gap-3 pt-2">
-          <button type="submit" disabled={pending}
-            className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 transition-colors">
-            {pending ? "Saving…" : "Record Payment"}
-          </button>
-          <button type="button" onClick={() => router.back()}
-            className="rounded-lg border border-slate-200 px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancel
-          </button>
-        </div>
+        <FormActions pending={pending} submitLabel="Record Payment" pendingLabel="Saving…" onCancel={() => router.back()} />
       </form>
     </Modal>
   );

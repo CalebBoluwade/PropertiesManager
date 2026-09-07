@@ -4,13 +4,23 @@ import { getExpenses } from "./actions";
 import { getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { MediaGrid } from "@/components/media-grid";
+import { SearchInput } from "@/components/search-input";
+import { Suspense } from "react";
 
-export default async function ExpensesPage() {
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
   const [isDemo, dateFormat] = await Promise.all([
     getDataMode().then((m) => m === "demo"),
     getDateFormat(),
   ]);
-  const expenses = isDemo ? DEMO.expenses : await getExpenses();
+  const allExpenses = isDemo ? DEMO.expenses : await getExpenses();
+  const expenses = q
+    ? allExpenses.filter((e) =>
+        [e.category, e.description, e.vendor, e.property.name].some((v) =>
+          v?.toLowerCase().includes(q.toLowerCase())
+        )
+      )
+    : allExpenses;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   const categoryStyles: Record<string, string> = {
@@ -29,12 +39,17 @@ export default async function ExpensesPage() {
           <h1 className="text-[1.6rem] font-bold text-slate-900 tracking-tight leading-none">Expenses</h1>
           <p className="mt-1.5 text-sm text-slate-400">Track all property expenses and costs.</p>
         </div>
-        <Link
-          href="/dashboard/expenses/new"
-          className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
-        >
-          + Add Expense
-        </Link>
+        <div className="flex items-center gap-3">
+          <Suspense>
+            <SearchInput placeholder="Search expenses..." />
+          </Suspense>
+          <Link
+            href="/dashboard/expenses/new"
+            className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+          >
+            + Add Expense
+          </Link>
+        </div>
       </div>
 
       {expenses.length > 0 && (

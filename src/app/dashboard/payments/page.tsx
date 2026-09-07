@@ -4,18 +4,28 @@ import { money, formatDate } from "@/lib/fx";
 import { getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { getPayments } from "./actions";
+import { SearchInput } from "@/components/search-input";
+import { Suspense } from "react";
 
-export default async function PaymentsPage() {
+export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
   const [isDemo, dateFormat] = await Promise.all([
     getDataMode().then((m) => m === "demo"),
     getDateFormat(),
   ]);
-  const obligations = isDemo
+  const allObligations = isDemo
     ? DEMO.obligations
     : await db.query.rentObligations.findMany({
         with: { lease: { with: { tenant: true, property: true } } },
         orderBy: (obligations, { desc }) => desc(obligations.dueDate),
       });
+  const obligations = q
+    ? allObligations.filter((o) =>
+        [o.lease.tenant.name, o.lease.property.name, o.status].some((v) =>
+          v?.toLowerCase().includes(q.toLowerCase())
+        )
+      )
+    : allObligations;
   const paymentRecords = isDemo ? [] : await getPayments();
 
   const statusStyles: Record<string, string> = {
@@ -33,17 +43,22 @@ export default async function PaymentsPage() {
           <h1 className="text-[1.6rem] font-bold text-slate-900 tracking-tight leading-none">Rent & Payments</h1>
           <p className="mt-1.5 text-sm text-slate-400">Track all rent obligations and payments.</p>
         </div>
-        <Link
-          href="/dashboard/payments/new"
-          className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
-        >
-          + Record Payment
-        </Link>
+        <div className="flex items-center gap-3">
+          <Suspense>
+            <SearchInput placeholder="Search payments..." />
+          </Suspense>
+          <Link
+            href="/dashboard/payments/new"
+            className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+          >
+            + Record Payment
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-180 text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
                 <th className="px-5 py-3.5">Tenant</th>
@@ -96,7 +111,7 @@ export default async function PaymentsPage() {
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payment Transactions</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
+            <table className="w-full min-w-140 text-left text-sm">
               <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
                 <tr>
                   <th className="px-5 py-3.5">Date</th>

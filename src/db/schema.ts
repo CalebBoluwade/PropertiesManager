@@ -84,6 +84,8 @@ export const tenants = sqliteTable("tenants", {
   propertyId: text("property_id").notNull().references(() => properties.id),
   monthlyRent: real("monthly_rent").notNull(),
   securityDeposit: real("security_deposit").notNull(),
+  moveInDate: integer("move_in_date", { mode: "timestamp" }),
+  moveOutDate: integer("move_out_date", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });

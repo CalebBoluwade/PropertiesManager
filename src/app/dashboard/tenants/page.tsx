@@ -3,15 +3,25 @@ import { db } from "@/db";
 import { money } from "@/lib/fx";
 import { getDataMode } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
+import { SearchInput } from "@/components/search-input";
+import { Suspense } from "react";
 
-export default async function TenantsPage() {
+export default async function TenantsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
   const isDemo = (await getDataMode()) === "demo";
-  const tenants = isDemo
+  const allTenants = isDemo
     ? DEMO.tenants
     : await db.query.tenants.findMany({
         with: { property: true },
         orderBy: (tenants, { desc }) => desc(tenants.createdAt),
       });
+  const tenants = q
+    ? allTenants.filter((t) =>
+        [t.name, t.email, t.phone, t.property.name].some((v) =>
+          v?.toLowerCase().includes(q.toLowerCase())
+        )
+      )
+    : allTenants;
 
   return (
     <div className="space-y-6">
@@ -20,17 +30,22 @@ export default async function TenantsPage() {
           <h1 className="text-[1.6rem] font-bold text-slate-900 tracking-tight leading-none">Tenants</h1>
           <p className="mt-1.5 text-sm text-slate-400">Manage all your tenants and their leases.</p>
         </div>
-        <Link
-          href="/dashboard/tenants/new"
-          className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
-        >
-          + Add Tenant
-        </Link>
+        <div className="flex items-center gap-3">
+          <Suspense>
+            <SearchInput placeholder="Search tenants..." />
+          </Suspense>
+          <Link
+            href="/dashboard/tenants/new"
+            className="shrink-0 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+          >
+            + Add Tenant
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+          <table className="w-full min-w-160 text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
                 <th className="px-5 py-3.5">Name</th>
@@ -38,6 +53,7 @@ export default async function TenantsPage() {
                 <th className="px-5 py-3.5">Property</th>
                 <th className="px-5 py-3.5">Monthly Rent</th>
                 <th className="px-5 py-3.5">Deposit</th>
+                <th className="px-5 py-3.5">Move-in</th>
                 <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
@@ -60,6 +76,10 @@ export default async function TenantsPage() {
                   <td className="px-5 py-4 text-slate-600">
                     {money(tenant.securityDeposit, tenant.property.currency)}
                   </td>
+                  <td className="px-5 py-4 text-slate-500 text-xs">
+                    {tenant.moveInDate ? new Date(tenant.moveInDate).toLocaleDateString() : "—"}
+                    {tenant.moveOutDate && <span className="block text-slate-400">→ {new Date(tenant.moveOutDate).toLocaleDateString()}</span>}
+                  </td>
                   <td className="px-5 py-4">
                     <Link href={`/dashboard/tenants/edit/${tenant.id}`} className="text-xs text-indigo-500 hover:underline">Edit</Link>
                   </td>
@@ -67,7 +87,7 @@ export default async function TenantsPage() {
               ))}
               {!tenants.length && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center text-sm text-slate-400">
+                  <td colSpan={7} className="px-5 py-16 text-center text-sm text-slate-400">
                     No tenants yet. <Link href="/dashboard/tenants/new" className="text-indigo-500 hover:underline">Add one</Link>.
                   </td>
                 </tr>
