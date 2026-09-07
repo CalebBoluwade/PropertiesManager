@@ -6,6 +6,7 @@ import { properties as propertiesTable } from "@/db/schema";
 import { MediaGrid } from "@/components/media-grid";
 import { getDataMode } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
+import { AddUnitForm } from "./add-unit-form";
 
 function mimeFromDataUri(url: string) {
   const m = url.match(/^data:([^;]+);/);
@@ -94,6 +95,7 @@ export default async function PropertyDetailPage({ params }: Readonly<{ params: 
             </p>
           )}
         </div>
+        {!isDemo && <AddUnitForm propertyId={property.id} propertyTypeName={property.propertyType.name} />}
       </div>
     </div>
   );

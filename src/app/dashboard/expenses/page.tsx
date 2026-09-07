@@ -1,12 +1,15 @@
 import Link from "next/link";
-import { money } from "@/lib/fx";
+import { money, formatDate } from "@/lib/fx";
 import { getExpenses } from "./actions";
-import { getDataMode } from "@/lib/data-mode";
+import { getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { MediaGrid } from "@/components/media-grid";
 
 export default async function ExpensesPage() {
-  const isDemo = (await getDataMode()) === "demo";
+  const [isDemo, dateFormat] = await Promise.all([
+    getDataMode().then((m) => m === "demo"),
+    getDateFormat(),
+  ]);
   const expenses = isDemo ? DEMO.expenses : await getExpenses();
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -53,13 +56,14 @@ export default async function ExpensesPage() {
                 <th className="px-5 py-3.5">Amount</th>
                 <th className="px-5 py-3.5">Vendor</th>
                 <th className="px-5 py-3.5">Receipt</th>
+                <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
             <tbody>
               {expenses.map((expense) => (
                 <tr key={expense.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-4 text-xs text-slate-500">
-                    {new Date(expense.expenseDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    {formatDate(expense.expenseDate, dateFormat)}
                   </td>
                   <td className="px-5 py-4">
                     <Link href={`/dashboard/properties/${expense.property.id}`} className="text-indigo-500 hover:underline">
@@ -79,11 +83,14 @@ export default async function ExpensesPage() {
                       <MediaGrid items={[{ id: expense.id, url: expense.receiptUrl, mime: expense.receiptUrl.match(/^data:([^;]+);/)?.[1], caption: expense.description }]} />
                     ) : <span className="text-slate-400">—</span>}
                   </td>
+                  <td className="px-5 py-4">
+                    <Link href={`/dashboard/expenses/edit/${expense.id}`} className="text-xs text-indigo-500 hover:underline">Edit</Link>
+                  </td>
                 </tr>
               ))}
               {!expenses.length && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center text-sm text-slate-400">
+                  <td colSpan={8} className="px-5 py-16 text-center text-sm text-slate-400">
                     No expenses yet. <Link href="/dashboard/expenses/new" className="text-indigo-500 hover:underline">Add one</Link>.
                   </td>
                 </tr>

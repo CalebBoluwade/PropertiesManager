@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency, formatCurrencyCompact } from "@/lib/fx";
+import { formatCurrency, formatCurrencyCompact, getCurrencySymbol } from "@/lib/fx";
+import { useCurrency } from "@/components/providers";
 import {
   FileDown, TrendingUp, TrendingDown, Building2, Users, Wallet,
   AlertCircle, Clock, CalendarX, RefreshCw, ChevronRight,
@@ -101,6 +102,8 @@ export default function DashboardPage() {
   const [range, setRange] = useState<Range>("6M");
   const dashboardRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const currencyCode = useCurrency();
+  const sym = getCurrencySymbol(currencyCode);
 
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -163,12 +166,12 @@ export default function DashboardPage() {
   const radialData = [{ name: "Occupancy", value: data.occupancyRate, fill: "#6366f1" }];
 
   const kpis = [
-    { label: "Portfolio Value", value: formatCurrencyCompact(data.portfolioValue), icon: Building2, gradient: "from-indigo-500 to-violet-600", sub: `${data.totalProperties} properties`, href: "/dashboard/properties" },
-    { label: "Monthly Rent", value: formatCurrencyCompact(data.monthlyRentExpected), icon: Wallet, gradient: "from-emerald-500 to-teal-600", sub: `${data.totalUnits} units`, href: "/dashboard/payments" },
-    { label: "Net Cash Flow", value: formatCurrencyCompact(data.netCashFlow), icon: data.netCashFlow >= 0 ? TrendingUp : TrendingDown, gradient: data.netCashFlow >= 0 ? "from-sky-500 to-blue-600" : "from-rose-500 to-red-600", sub: "this month", href: "/dashboard/payments" },
-    { label: "Outstanding Rent", value: formatCurrencyCompact(data.outstandingRent), icon: AlertCircle, gradient: data.outstandingRent > data.monthlyRentExpected * 0.1 ? "from-red-500 to-rose-600" : "from-amber-500 to-orange-600", sub: data.outstandingRent > data.monthlyRentExpected * 0.1 ? "⚠ needs attention" : "on track", href: "/dashboard/payments" },
+    { label: "Portfolio Value", value: formatCurrencyCompact(data.portfolioValue, sym), icon: Building2, gradient: "from-indigo-500 to-violet-600", sub: `${data.totalProperties} properties`, href: "/dashboard/properties" },
+    { label: "Monthly Rent", value: formatCurrencyCompact(data.monthlyRentExpected, sym), icon: Wallet, gradient: "from-emerald-500 to-teal-600", sub: `${data.totalUnits} units`, href: "/dashboard/payments" },
+    { label: "Net Cash Flow", value: formatCurrencyCompact(data.netCashFlow, sym), icon: data.netCashFlow >= 0 ? TrendingUp : TrendingDown, gradient: data.netCashFlow >= 0 ? "from-sky-500 to-blue-600" : "from-rose-500 to-red-600", sub: "this month", href: "/dashboard/payments" },
+    { label: "Outstanding Rent", value: formatCurrencyCompact(data.outstandingRent, sym), icon: AlertCircle, gradient: data.outstandingRent > data.monthlyRentExpected * 0.1 ? "from-red-500 to-rose-600" : "from-amber-500 to-orange-600", sub: data.outstandingRent > data.monthlyRentExpected * 0.1 ? "⚠ needs attention" : "on track", href: "/dashboard/payments" },
     { label: "Active Tenants", value: String(data.totalTenants), icon: Users, gradient: "from-pink-500 to-rose-600", sub: `${data.occupancyRate.toFixed(0)}% occupancy`, href: "/dashboard/tenants" },
-    { label: "Total Expenses", value: formatCurrencyCompact(data.totalExpensesAllTime), icon: TrendingDown, gradient: "from-slate-500 to-slate-700", sub: "all time", href: "/dashboard/expenses" },
+    { label: "Total Expenses", value: formatCurrencyCompact(data.totalExpensesAllTime, sym), icon: TrendingDown, gradient: "from-slate-500 to-slate-700", sub: "all time", href: "/dashboard/expenses" },
   ];
 
   return (
@@ -272,10 +275,10 @@ export default function DashboardPage() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${sym}${(v / 1000).toFixed(0)}k`} />
               <Tooltip
                 contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 24px rgba(0,0,0,0.1)", fontSize: 12 }}
-                formatter={(v) => formatCurrency(Number(v))}
+                formatter={(v) => formatCurrency(Number(v), sym)}
               />
               <Area type="monotone" dataKey="rent" stroke="#6366f1" strokeWidth={2.5} fill="url(#gRent)" dot={false} activeDot={{ r: 5, fill: "#6366f1" }} />
               <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2.5} fill="url(#gExp)" dot={false} activeDot={{ r: 5, fill: "#f43f5e" }} />
@@ -304,8 +307,8 @@ export default function DashboardPage() {
               <BarChart data={data.propertyBreakdown} barGap={4} margin={{ left: 10, right: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 24px rgba(0,0,0,0.1)", fontSize: 12 }} formatter={(v) => formatCurrency(Number(v))} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${sym}${(v / 1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 24px rgba(0,0,0,0.1)", fontSize: 12 }} formatter={(v) => formatCurrency(Number(v), sym)} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="rent" name="Rent" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={28} />
                 <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[6, 6, 0, 0]} barSize={28} />
@@ -327,7 +330,7 @@ export default function DashboardPage() {
                 <Pie data={rentPie} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value" strokeWidth={0}>
                   {rentPie.map((e, i) => <Cell key={i} fill={e.color} />)}
                 </Pie>
-                <Tooltip contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", fontSize: 12 }} formatter={(v) => formatCurrency(Number(v))} />
+                <Tooltip contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", fontSize: 12 }} formatter={(v) => formatCurrency(Number(v), sym)} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -402,7 +405,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 ml-3 shrink-0">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(due.status)}`}>{due.status}</span>
-                      <span className="text-sm font-semibold text-slate-800">{formatCurrency(due.amountDue)}</span>
+                      <span className="text-sm font-semibold text-slate-800">{formatCurrency(due.amountDue, sym)}</span>
                     </div>
                   </div>
                 ))}
@@ -458,9 +461,9 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={Math.max(expensesBar.length * 44, 180)}>
               <BarChart data={expensesBar} layout="vertical" barSize={22} margin={{ left: 8, right: 24 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${sym}${(v / 1000).toFixed(0)}k`} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} width={110} />
-                <Tooltip contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", fontSize: 12 }} formatter={(v) => formatCurrency(Number(v))} />
+                <Tooltip contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", fontSize: 12 }} formatter={(v) => formatCurrency(Number(v), sym)} />
                 <Bar dataKey="value" radius={[0, 8, 8, 0]}>
                   {expensesBar.map((e, i) => <Cell key={i} fill={e.color} />)}
                 </Bar>

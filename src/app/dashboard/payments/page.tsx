@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { money } from "@/lib/fx";
-import { getDataMode } from "@/lib/data-mode";
+import { money, formatDate } from "@/lib/fx";
+import { getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
+import { getPayments } from "./actions";
 
 export default async function PaymentsPage() {
-  const isDemo = (await getDataMode()) === "demo";
+  const [isDemo, dateFormat] = await Promise.all([
+    getDataMode().then((m) => m === "demo"),
+    getDateFormat(),
+  ]);
   const obligations = isDemo
     ? DEMO.obligations
     : await db.query.rentObligations.findMany({
         with: { lease: { with: { tenant: true, property: true } } },
         orderBy: (obligations, { desc }) => desc(obligations.dueDate),
       });
+  const paymentRecords = isDemo ? [] : await getPayments();
 
   const statusStyles: Record<string, string> = {
     PAID: "bg-emerald-50 text-emerald-700",
@@ -58,7 +63,7 @@ export default async function PaymentsPage() {
                     <td className="px-5 py-4 font-medium text-slate-900">{obligation.lease.tenant.name}</td>
                     <td className="px-5 py-4 text-slate-600">{obligation.lease.property.name}</td>
                     <td className="px-5 py-4 text-slate-500 text-xs">
-                      {new Date(obligation.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      {formatDate(obligation.dueDate, dateFormat)}
                     </td>
                     <td className="px-5 py-4 text-slate-800">{money(obligation.amountDue, "NGN")}</td>
                     <td className="px-5 py-4 text-slate-600">{money(obligation.amountPaid, "NGN")}</td>
@@ -84,6 +89,40 @@ export default async function PaymentsPage() {
           </table>
         </div>
       </div>
+
+      {paymentRecords.length > 0 && (
+        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs">
+          <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payment Transactions</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="px-5 py-3.5">Date</th>
+                  <th className="px-5 py-3.5">Property</th>
+                  <th className="px-5 py-3.5">Amount</th>
+                  <th className="px-5 py-3.5">Notes</th>
+                  <th className="px-5 py-3.5"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {paymentRecords.map((p) => (
+                  <tr key={p.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                    <td className="px-5 py-4 text-xs text-slate-500">{formatDate(p.paymentDate, dateFormat)}</td>
+                    <td className="px-5 py-4 text-slate-600">{p.unit?.property.name ?? "—"}</td>
+                    <td className="px-5 py-4 font-medium text-slate-800">{money(p.amount, "NGN")}</td>
+                    <td className="px-5 py-4 text-slate-500">{p.notes || "—"}</td>
+                    <td className="px-5 py-4">
+                      <Link href={`/dashboard/payments/edit/${p.id}`} className="text-xs text-indigo-500 hover:underline">Edit</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

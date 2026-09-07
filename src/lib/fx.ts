@@ -38,12 +38,28 @@ export function daysOverdue(dueDate: string): number {
   return Math.max(0, diff);
 }
 
+export const CURRENCIES: { code: string; symbol: string; label: string }[] = [
+  { code: "NGN", symbol: "₦", label: "Nigerian Naira (₦)" },
+  { code: "USD", symbol: "$", label: "US Dollar ($)" },
+  { code: "GBP", symbol: "£", label: "British Pound (£)" },
+  { code: "EUR", symbol: "€", label: "Euro (€)" },
+  { code: "GHS", symbol: "₵", label: "Ghanaian Cedi (₵)" },
+  { code: "KES", symbol: "KSh", label: "Kenyan Shilling (KSh)" },
+  { code: "ZAR", symbol: "R", label: "South African Rand (R)" },
+  { code: "CAD", symbol: "CA$", label: "Canadian Dollar (CA$)" },
+  { code: "AED", symbol: "AED", label: "UAE Dirham (AED)" },
+];
+
+export function getCurrencySymbol(code: string): string {
+  return CURRENCIES.find((c) => c.code === code)?.symbol ?? code;
+}
+
 export const CURRENCY_SYMBOL = "₦";
  
-export function formatCurrency(amount: number | null | undefined): string {
+export function formatCurrency(amount: number | null | undefined, currencySymbol = CURRENCY_SYMBOL): string {
   const value = amount ?? 0;
   const sign = value < 0 ? "-" : "";
-  return `${sign}${CURRENCY_SYMBOL}${Math.abs(value).toLocaleString("en-US", {
+  return `${sign}${currencySymbol}${Math.abs(value).toLocaleString("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })}`;
@@ -58,20 +74,41 @@ export function money(value: number | string | null | undefined, currency = "NGN
 }
  
 /** Compact form for headline dashboard stats: $4.2M, $28.5K */
-export function formatCurrencyCompact(amount: number | null | undefined): string {
+export function formatCurrencyCompact(amount: number | null | undefined, currencySymbol = CURRENCY_SYMBOL): string {
   const value = amount ?? 0;
   const abs = Math.abs(value);
   const sign = value < 0 ? "-" : "";
-  if (abs >= 1_000_000) return `${sign}${CURRENCY_SYMBOL}${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 10_000) return `${sign}${CURRENCY_SYMBOL}${(abs / 1_000).toFixed(1)}K`;
-  return formatCurrency(value);
+  if (abs >= 1_000_000) return `${sign}${currencySymbol}${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000) return `${sign}${currencySymbol}${(abs / 1_000).toFixed(1)}K`;
+  return formatCurrency(value, currencySymbol);
 }
  
-export function formatDate(date: string | Date | null | undefined): string {
+export const DATE_FORMATS: { value: string; label: string; example: string }[] = [
+  { value: "MMM D, YYYY",  label: "Jan 5, 2025",    example: "Jan 5, 2025" },
+  { value: "D MMM YYYY",   label: "5 Jan 2025",     example: "5 Jan 2025" },
+  { value: "DD/MM/YYYY",   label: "05/01/2025",     example: "05/01/2025" },
+  { value: "MM/DD/YYYY",   label: "01/05/2025",     example: "01/05/2025" },
+  { value: "YYYY-MM-DD",   label: "2025-01-05",     example: "2025-01-05" },
+];
+
+export function formatDate(date: string | Date | null | undefined, fmt = "MMM D, YYYY"): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  const day   = d.getDate();
+  const dd    = String(day).padStart(2, "0");
+  const month = d.getMonth(); // 0-indexed
+  const yyyy  = d.getFullYear();
+  const mm    = String(month + 1).padStart(2, "0");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const mmm   = months[month];
+  switch (fmt) {
+    case "D MMM YYYY":  return `${day} ${mmm} ${yyyy}`;
+    case "DD/MM/YYYY":  return `${dd}/${mm}/${yyyy}`;
+    case "MM/DD/YYYY":  return `${mm}/${dd}/${yyyy}`;
+    case "YYYY-MM-DD":  return `${yyyy}-${mm}-${dd}`;
+    default:            return `${mmm} ${day}, ${yyyy}`; // MMM D, YYYY
+  }
 }
  
 export function formatDateInput(date: string | Date | null | undefined): string {

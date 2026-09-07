@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { getCurrency, getDateFormat, getExpenseCategories } from "@/lib/data-mode";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -10,7 +11,12 @@ export const metadata: Metadata = {
   description: "Property portfolio and rental management system",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const [currency, dateFormat, expenseCategories] = await Promise.all([
+    getCurrency(),
+    getDateFormat(),
+    getExpenseCategories(),
+  ]);
   return (
     <html
       lang="en"
@@ -18,7 +24,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers currency={currency} dateFormat={dateFormat} expenseCategories={expenseCategories}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

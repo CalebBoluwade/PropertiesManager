@@ -38,6 +38,7 @@ export default async function PropertiesPage() {
                 <th className="px-5 py-3.5">Units</th>
                 <th className="px-5 py-3.5">Status</th>
                 <th className="px-5 py-3.5">Value</th>
+                <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -59,11 +60,14 @@ export default async function PropertiesPage() {
                   <td className="px-5 py-4 font-medium text-slate-800">
                     {money(Number(property.currentValue ?? 0), property.currency)}
                   </td>
+                  <td className="px-5 py-4">
+                    <Link href={`/dashboard/properties/edit/${property.id}`} className="text-xs text-indigo-500 hover:underline">Edit</Link>
+                  </td>
                 </tr>
               ))}
               {!properties.length && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-16 text-center text-sm text-slate-400">
+                  <td colSpan={6} className="px-5 py-16 text-center text-sm text-slate-400">
                     No properties yet. <Link href="/dashboard/properties/new" className="text-indigo-500 hover:underline">Add one</Link>.
                   </td>
                 </tr>

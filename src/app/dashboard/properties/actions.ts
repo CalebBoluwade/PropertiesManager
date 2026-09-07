@@ -45,10 +45,12 @@ export async function createProperty(formData: FormData) {
     const monthlyRent = formData.get("defaultRent")
       ? Number(formData.get("defaultRent"))
       : null;
+    const unitType = String(formData.get("defaultUnitType") || "") || null;
     const rows = Array.from({ length: numberOfUnits }, (_, i) => ({
       propertyId: property.id,
       unitNumber: numberOfUnits === 1 ? "Main Unit" : `Unit ${i + 1}`,
       monthlyRent,
+      unitType,
     }));
 
     await db.insert(units).values(rows);
@@ -89,6 +91,7 @@ export async function updateProperty(id: string, formData: FormData) {
       address: String(formData.get("address") || ""),
       city: String(formData.get("city") || "") || null,
       state: String(formData.get("state") || "") || null,
+      country: String(formData.get("country") || "Nigeria"),
       purchasePrice: formData.get("purchasePrice") ? Number(formData.get("purchasePrice")) : null,
       currentValue: formData.get("currentValue") ? Number(formData.get("currentValue")) : null,
       notes: (formData.get("notes") as string) || null,
@@ -115,6 +118,7 @@ export async function addUnit(propertyId: string, formData: FormData) {
   await db.insert(units).values({
     propertyId,
     unitNumber: String(formData.get("unitNumber") || "New Unit"),
+    unitType: String(formData.get("unitType") || "") || null,
     monthlyRent: formData.get("monthlyRent") ? Number(formData.get("monthlyRent")) : null,
   });
   revalidatePath(`/dashboard/properties/${propertyId}`);

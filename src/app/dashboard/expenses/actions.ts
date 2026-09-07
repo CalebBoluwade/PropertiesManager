@@ -35,6 +35,23 @@ export async function createExpense(formData: FormData) {
   revalidatePath("/dashboard/reports");
 }
 
+export async function updateExpense(id: string, formData: FormData) {
+  const dateStr = formData.get("date") as string;
+  await db
+    .update(expenses)
+    .set({
+      propertyId: String(formData.get("propertyId") || ""),
+      category: String(formData.get("category") || "OTHER"),
+      amount: Number(formData.get("amount") || 0),
+      expenseDate: dateStr ? new Date(dateStr) : new Date(),
+      description: String(formData.get("description") || ""),
+    })
+    .where(eq(expenses.id, id));
+
+  revalidatePath("/dashboard/expenses");
+  revalidatePath("/dashboard");
+}
+
 export async function deleteExpense(id: string) {
   await db.delete(expenses).where(eq(expenses.id, id));
   revalidatePath("/dashboard/expenses");

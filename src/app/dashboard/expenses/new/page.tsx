@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { X, FileText } from "lucide-react";
 import { createExpense } from "../actions";
 import { EXPENSE_CATEGORIES } from "../constants";
+import { useExpenseCategories } from "@/components/providers";
 
 type ExpenseFormValues = {
   propertyId: string;
@@ -30,6 +31,8 @@ export default function NewExpensePage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const activeCategories = useExpenseCategories();
+  const categories = EXPENSE_CATEGORIES.filter((c) => activeCategories.includes(c.value));
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     setFileError(null);
@@ -78,7 +81,7 @@ export default function NewExpensePage() {
           <label htmlFor="category" className={labelCls}>Category *</label>
           <select id="category" className={inputCls} {...register("category", { required: "Required" })}>
             <option value="">Select category</option>
-            {EXPENSE_CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <option key={cat.value} value={cat.value}>{cat.label}</option>
             ))}
           </select>

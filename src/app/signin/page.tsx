@@ -1,45 +1,60 @@
 "use client";
 
+import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Building2 } from "lucide-react";
+import { Building2, Loader2 } from "lucide-react";
 
 export default function SignInPage() {
+  const [loading, setLoading] = useState(false);
+
+  function handleSignIn() {
+    setLoading(true);
+    signIn("google", { callbackUrl: "/dashboard", prompt: "select_account" });
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex items-center gap-2 mb-8 justify-center">
-          <div className="w-9 h-9 rounded-xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center">
-            <Building2 size={18} className="text-white dark:text-zinc-900" />
+    <>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 dark:bg-zinc-950/60 backdrop-blur-sm">
+          <Loader2 size={32} className="animate-spin text-zinc-900 dark:text-zinc-50" />
+        </div>
+      )}
+
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
+        <div className="w-full max-w-sm">
+          <div className="flex items-center gap-2 mb-8 justify-center">
+            <div className="w-9 h-9 rounded-xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center">
+              <Building2 size={18} className="text-white dark:text-zinc-900" />
+            </div>
+            <span className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Holding
+            </span>
           </div>
-          <span className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Holding
-          </span>
-        </div>
 
-        {/* Card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
-          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
-            Sign in to your account
-          </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
-            Manage your property portfolio
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
+            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
+              Sign in to your account
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+              Manage your property portfolio
+            </p>
+
+            <button
+              disabled={loading}
+              onClick={handleSignIn}
+              className="w-full flex items-center justify-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
+          </div>
+
+          <p className="text-center text-xs text-zinc-400 mt-6">
+            By signing in, you agree to our terms of service.
           </p>
-
-          <button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard", prompt: "select_account" })}
-            className="w-full flex items-center justify-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </button>
         </div>
-
-        <p className="text-center text-xs text-zinc-400 mt-6">
-          By signing in, you agree to our terms of service.
-        </p>
       </div>
-    </div>
+    </>
   );
 }
 

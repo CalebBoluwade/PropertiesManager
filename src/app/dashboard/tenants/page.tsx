@@ -38,6 +38,7 @@ export default async function TenantsPage() {
                 <th className="px-5 py-3.5">Property</th>
                 <th className="px-5 py-3.5">Monthly Rent</th>
                 <th className="px-5 py-3.5">Deposit</th>
+                <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -59,11 +60,14 @@ export default async function TenantsPage() {
                   <td className="px-5 py-4 text-slate-600">
                     {money(tenant.securityDeposit, tenant.property.currency)}
                   </td>
+                  <td className="px-5 py-4">
+                    <Link href={`/dashboard/tenants/edit/${tenant.id}`} className="text-xs text-indigo-500 hover:underline">Edit</Link>
+                  </td>
                 </tr>
               ))}
               {!tenants.length && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-16 text-center text-sm text-slate-400">
+                  <td colSpan={6} className="px-5 py-16 text-center text-sm text-slate-400">
                     No tenants yet. <Link href="/dashboard/tenants/new" className="text-indigo-500 hover:underline">Add one</Link>.
                   </td>
                 </tr>

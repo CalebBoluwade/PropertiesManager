@@ -116,6 +116,21 @@ export async function recordPayment(id: string, formData: FormData) {
   redirect("/payments");
 }
 
+export async function updatePayment(id: string, formData: FormData) {
+  const paidDate = (formData.get("paidDate") as string) || new Date().toISOString().slice(0, 10);
+  await db
+    .update(payments)
+    .set({
+      amount: Number(formData.get("amount") || 0),
+      paymentDate: new Date(paidDate),
+      notes: (formData.get("notes") as string) || null,
+    })
+    .where(eq(payments.id, id));
+
+  revalidatePath("/dashboard/payments");
+  revalidatePath("/dashboard");
+}
+
 export async function deletePayment(id: string) {
   await db.delete(payments).where(eq(payments.id, id));
   revalidatePath("/payments");

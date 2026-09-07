@@ -1,18 +1,17 @@
 import { auth } from "@/auth";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getDataMode } from "@/lib/data-mode";
 
 export default async function DashboardLayout({
   children,
   modal,
-}: {
+}: Readonly<{
   children: React.ReactNode;
   modal: React.ReactNode;
-}) {
-  const [session, dataMode] = await Promise.all([auth(), getDataMode()]);
+}>) {
+  const session = await auth();
 
   return (
-    <DashboardShell user={session?.user} dataMode={dataMode} modal={modal}>
+    <DashboardShell user={session?.user} modal={modal}>
       {children}
     </DashboardShell>
   );

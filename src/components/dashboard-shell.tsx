@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
-import type { DataMode } from "@/lib/data-mode";
 
 interface DashboardShellProps {
   children: React.ReactNode;
   modal: React.ReactNode;
-  dataMode?: DataMode;
   user?: {
     name?: string | null;
     email?: string | null;
@@ -16,21 +14,21 @@ interface DashboardShellProps {
   };
 }
 
-export function DashboardShell({ children, modal, user, dataMode }: DashboardShellProps) {
+export function DashboardShell({ children, modal, user }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:flex-col md:shrink-0 md:sticky md:top-0 md:h-screen md:w-16 lg:w-60 transition-all duration-200">
-        <Sidebar user={user} dataMode={dataMode} />
+        <Sidebar user={user} />
       </aside>
 
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40 flex">
           <div className="w-64 shrink-0 h-full">
-            <Sidebar user={user} dataMode={dataMode} onNavigate={() => setMobileOpen(false)} />
+            <Sidebar user={user} onNavigate={() => setMobileOpen(false)} />
           </div>
           <button
             className="flex-1 bg-black/40 backdrop-blur-sm"
