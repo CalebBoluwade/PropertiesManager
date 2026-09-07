@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useTransition } from "react";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -13,6 +14,7 @@ import {
   X,
   LogOut,
 } from "lucide-react";
+import { setDataMode, type DataMode } from "@/lib/data-mode";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -25,6 +27,7 @@ const NAV = [
 
 interface SidebarProps {
   onNavigate?: () => void;
+  dataMode?: DataMode;
   user?: {
     name?: string | null;
     email?: string | null;
@@ -32,8 +35,14 @@ interface SidebarProps {
   };
 }
 
-export function Sidebar({ onNavigate, user }: Readonly<SidebarProps>) {
+export function Sidebar({ onNavigate, user, dataMode = "live" }: Readonly<SidebarProps>) {
   const pathname = usePathname();
+  const [pending, startTransition] = useTransition();
+  const isDemo = dataMode === "demo";
+
+  function toggle() {
+    startTransition(() => setDataMode(isDemo ? "live" : "demo"));
+  }
   const initials = user?.name
     ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
     : "?";
@@ -91,6 +100,29 @@ export function Sidebar({ onNavigate, user }: Readonly<SidebarProps>) {
           );
         })}
       </nav>
+
+      {/* Demo / Live toggle */}
+      <div className="px-3 pb-3 shrink-0 lg:px-4">
+        <button
+          onClick={toggle}
+          disabled={pending}
+          title={isDemo ? "Switch to live data" : "Switch to demo data"}
+          className="w-full flex items-center justify-between rounded-md px-2.5 py-2 text-xs transition-colors bg-paper/5 hover:bg-paper/10 text-paper/60 hover:text-paper/90"
+        >
+          <span className="hidden lg:inline">{isDemo ? "Demo data" : "Live data"}</span>
+          <span
+            className={`shrink-0 w-7 h-4 rounded-full transition-colors relative ${
+              isDemo ? "bg-ledger-amber" : "bg-paper/20"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
+                isDemo ? "translate-x-3.5" : "translate-x-0.5"
+              }`}
+            />
+          </span>
+        </button>
+      </div>
 
       {/* Footer — user profile + sign out */}
       <div className="px-3 py-4 border-t border-paper/10 shrink-0 lg:px-4 lg:py-4">

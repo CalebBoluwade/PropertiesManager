@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { money } from "@/lib/fx";
 import { getExpenses } from "./actions";
+import { getDataMode } from "@/lib/data-mode";
+import { DEMO } from "@/lib/demo-data";
 import { MediaGrid } from "@/components/media-grid";
 
 export default async function ExpensesPage() {
-  const expenses = await getExpenses();
+  const isDemo = (await getDataMode()) === "demo";
+  const expenses = isDemo ? DEMO.expenses : await getExpenses();
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   const categoryStyles: Record<string, string> = {

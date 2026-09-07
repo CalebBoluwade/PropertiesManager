@@ -22,7 +22,7 @@ export async function createProperty(formData: FormData) {
     throw new Error("Name, address and property type are required.");
   }
 
-  const property = db
+  const [property] = await db
     .insert(propertiesTable)
     .values({
       name,
@@ -39,8 +39,7 @@ export async function createProperty(formData: FormData) {
         : null,
       notes: String(formData.get("notes") || "") || null,
     })
-    .returning()
-    .get();
+    .returning();
 
   if (numberOfUnits > 0) {
     const monthlyRent = formData.get("defaultRent")

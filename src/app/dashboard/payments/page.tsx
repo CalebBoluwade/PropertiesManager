@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { money } from "@/lib/fx";
+import { getDataMode } from "@/lib/data-mode";
+import { DEMO } from "@/lib/demo-data";
 
 export default async function PaymentsPage() {
-  const obligations = await db.query.rentObligations.findMany({
-    with: { lease: { with: { tenant: true, property: true } } },
-    orderBy: (obligations, { desc }) => desc(obligations.dueDate),
-  });
+  const isDemo = (await getDataMode()) === "demo";
+  const obligations = isDemo
+    ? DEMO.obligations
+    : await db.query.rentObligations.findMany({
+        with: { lease: { with: { tenant: true, property: true } } },
+        orderBy: (obligations, { desc }) => desc(obligations.dueDate),
+      });
 
   const statusStyles: Record<string, string> = {
     PAID: "bg-emerald-50 text-emerald-700",

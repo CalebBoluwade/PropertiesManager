@@ -2,9 +2,64 @@ import { db } from "@/db";
 import { gte, lte, and } from "drizzle-orm";
 import { expenses, rentObligations, leases, payments } from "@/db/schema";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+const DEMO_DATA = {
+  portfolioValue: 1_065_000_000,
+  monthlyRentExpected: 43_100_000,
+  occupancyRate: 75,
+  occupiedUnits: 9,
+  totalUnits: 12,
+  outstandingRent: 10_775_000,
+  monthlyExpenses: 4_280_000,
+  netCashFlow: 28_045_000,
+  totalProperties: 4,
+  totalTenants: 9,
+  paidRent: 345_600_000,
+  pendingRent: 7_200_000,
+  overdueRent: 3_575_000,
+  totalExpensesAllTime: 12_720_000,
+  expensesByCategory: { REPAIRS: 3_710_000, UTILITIES: 1_710_000, SERVICE_CHARGE: 2_100_000, INSURANCE: 3_250_000, MANAGEMENT_FEE: 3_500_000, OTHER: 250_000 },
+  rentExpenseHistory: [
+    { month: "Aug", rent: 38_500_000, expenses: 3_200_000, cashFlow: 35_300_000 },
+    { month: "Sep", rent: 40_200_000, expenses: 4_100_000, cashFlow: 36_100_000 },
+    { month: "Oct", rent: 41_000_000, expenses: 3_800_000, cashFlow: 37_200_000 },
+    { month: "Nov", rent: 39_800_000, expenses: 5_200_000, cashFlow: 34_600_000 },
+    { month: "Dec", rent: 43_100_000, expenses: 6_100_000, cashFlow: 37_000_000 },
+    { month: "Jan", rent: 42_500_000, expenses: 4_500_000, cashFlow: 38_000_000 },
+    { month: "Feb", rent: 41_800_000, expenses: 3_900_000, cashFlow: 37_900_000 },
+    { month: "Mar", rent: 43_100_000, expenses: 4_280_000, cashFlow: 38_820_000 },
+    { month: "Apr", rent: 44_200_000, expenses: 3_600_000, cashFlow: 40_600_000 },
+    { month: "May", rent: 43_800_000, expenses: 4_900_000, cashFlow: 38_900_000 },
+    { month: "Jun", rent: 45_000_000, expenses: 4_100_000, cashFlow: 40_900_000 },
+    { month: "Jul", rent: 43_100_000, expenses: 4_280_000, cashFlow: 38_820_000 },
+  ],
+  propertyBreakdown: [
+    { name: "Victoria Island…", rent: 16_000_000, expenses: 5_300_000, units: 4, occupied: 2 },
+    { name: "Maitama Luxury…", rent: 17_600_000, expenses: 1_770_000, units: 4, occupied: 4 },
+    { name: "Lekki Phase 1…", rent: 9_500_000, expenses: 5_400_000, units: 6, occupied: 3 },
+    { name: "Ibeju-Lekki…", rent: 0, expenses: 250_000, units: 0, occupied: 0 },
+  ],
+  upcomingDues: [
+    { tenantName: "Chidi Enterprises", propertyName: "Victoria Island Office Complex", amountDue: 8_000_000, dueDate: new Date(Date.now() + 2 * 86400000).toISOString(), status: "DUE" },
+    { tenantName: "Adaeze Okonkwo", propertyName: "Lekki Phase 1 Estate", amountDue: 3_500_000, dueDate: new Date(Date.now() + 4 * 86400000).toISOString(), status: "PENDING" },
+    { tenantName: "Bola Tinubu-James", propertyName: "Maitama Luxury Apartments", amountDue: 5_000_000, dueDate: new Date(Date.now() + 6 * 86400000).toISOString(), status: "OVERDUE" },
+  ],
+  expiringLeases: [
+    { tenantName: "Bola Tinubu-James", propertyName: "Maitama Luxury Apartments", endDate: new Date(Date.now() + 12 * 86400000).toISOString(), daysLeft: 12 },
+    { tenantName: "Emeka Nwosu", propertyName: "Lekki Phase 1 Estate", endDate: new Date(Date.now() + 28 * 86400000).toISOString(), daysLeft: 28 },
+    { tenantName: "Zenith Consulting", propertyName: "Victoria Island Office Complex", endDate: new Date(Date.now() + 45 * 86400000).toISOString(), daysLeft: 45 },
+  ],
+  lastUpdated: new Date().toISOString(),
+};
 
 export async function GET() {
   try {
+    const jar = await cookies();
+    if (jar.get("data-mode")?.value === "demo") {
+      return NextResponse.json(DEMO_DATA);
+    }
+
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 

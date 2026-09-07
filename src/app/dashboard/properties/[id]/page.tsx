@@ -4,6 +4,8 @@ import { money } from "@/lib/fx";
 import { eq } from "drizzle-orm";
 import { properties as propertiesTable } from "@/db/schema";
 import { MediaGrid } from "@/components/media-grid";
+import { getDataMode } from "@/lib/data-mode";
+import { DEMO } from "@/lib/demo-data";
 
 function mimeFromDataUri(url: string) {
   const m = url.match(/^data:([^;]+);/);
@@ -12,10 +14,14 @@ function mimeFromDataUri(url: string) {
 
 export default async function PropertyDetailPage({ params }: Readonly<{ params: Promise<{ id: string }> }>) {
   const { id } = await params;
-  const property = await db.query.properties.findFirst({
-    where: eq(propertiesTable.id, id),
-    with: { propertyType: true, units: true, expenses: true, payments: true, photos: true, documents: true },
-  });
+  const isDemo = (await getDataMode()) === "demo";
+
+  const property = isDemo
+    ? DEMO.properties.find((p) => p.id === id) ?? null
+    : await db.query.properties.findFirst({
+        where: eq(propertiesTable.id, id),
+        with: { propertyType: true, units: true, expenses: true, payments: true, photos: true, documents: true },
+      }) ?? null;
 
   if (!property) notFound();
 

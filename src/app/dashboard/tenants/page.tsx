@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { money } from "@/lib/fx";
+import { getDataMode } from "@/lib/data-mode";
+import { DEMO } from "@/lib/demo-data";
 
 export default async function TenantsPage() {
-  const tenants = await db.query.tenants.findMany({
-    with: { property: true },
-    orderBy: (tenants, { desc }) => desc(tenants.createdAt),
-  });
+  const isDemo = (await getDataMode()) === "demo";
+  const tenants = isDemo
+    ? DEMO.tenants
+    : await db.query.tenants.findMany({
+        with: { property: true },
+        orderBy: (tenants, { desc }) => desc(tenants.createdAt),
+      });
 
   return (
     <div className="space-y-6">
