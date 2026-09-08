@@ -4,10 +4,11 @@ import { money } from "@/lib/fx";
 import { getDataMode } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { SearchInput } from "@/components/search-input";
+import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
-export default async function TenantsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
+export default async function TenantsPage({ searchParams }: Readonly<{ searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }>) {
+  const { q, sort, dir } = await searchParams;
   const isDemo = (await getDataMode()) === "demo";
   const allTenants = isDemo
     ? DEMO.tenants
@@ -15,13 +16,27 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
         with: { property: true },
         orderBy: (tenants, { desc }) => desc(tenants.createdAt),
       });
-  const tenants = q
+  const filtered = q
     ? allTenants.filter((t) =>
         [t.name, t.email, t.phone, t.property.name].some((v) =>
           v?.toLowerCase().includes(q.toLowerCase())
         )
       )
     : allTenants;
+  const asc = dir !== "desc";
+  const tenants = [...filtered].sort((a, b) => {
+    let av: string | number = 0, bv: string | number = 0;
+    if (sort === "name") { av = a.name; bv = b.name; }
+    else if (sort === "property") { av = a.property.name; bv = b.property.name; }
+    else if (sort === "rent") { av = a.monthlyRent; bv = b.monthlyRent; }
+    else if (sort === "deposit") { av = a.securityDeposit; bv = b.securityDeposit; }
+    else if (sort === "movein") {
+      av = a.moveInDate instanceof Date ? a.moveInDate.getTime() : (a.moveInDate ?? "");
+      bv = b.moveInDate instanceof Date ? b.moveInDate.getTime() : (b.moveInDate ?? "");
+    }
+    else return 0;
+    return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
 
   return (
     <div className="space-y-6">
@@ -48,12 +63,12 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
           <table className="w-full min-w-160 text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
-                <th className="px-5 py-3.5">Name</th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="name" label="Name" /></Suspense></th>
                 <th className="px-5 py-3.5">Contact</th>
-                <th className="px-5 py-3.5">Property</th>
-                <th className="px-5 py-3.5">Monthly Rent</th>
-                <th className="px-5 py-3.5">Deposit</th>
-                <th className="px-5 py-3.5">Move-in</th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="property" label="Property" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="rent" label="Monthly Rent" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="deposit" label="Deposit" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="movein" label="Move-in Date" /></Suspense></th>
                 <th className="px-5 py-3.5"></th>
               </tr>
             </thead>

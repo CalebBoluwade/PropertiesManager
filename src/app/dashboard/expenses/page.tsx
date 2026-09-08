@@ -5,22 +5,37 @@ import { getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { MediaGrid } from "@/components/media-grid";
 import { SearchInput } from "@/components/search-input";
+import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
-export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }) {
+  const { q, sort, dir } = await searchParams;
   const [isDemo, dateFormat] = await Promise.all([
     getDataMode().then((m) => m === "demo"),
     getDateFormat(),
   ]);
   const allExpenses = isDemo ? DEMO.expenses : await getExpenses();
-  const expenses = q
+  const filtered = q
     ? allExpenses.filter((e) =>
         [e.category, e.description, e.vendor, e.property.name].some((v) =>
           v?.toLowerCase().includes(q.toLowerCase())
         )
       )
     : allExpenses;
+  const asc = dir !== "desc";
+  const expenses = [...filtered].sort((a, b) => {
+    let av: string | number = 0, bv: string | number = 0;
+    if (sort === "date") {
+      av = a.expenseDate instanceof Date ? a.expenseDate.getTime() : (a.expenseDate ?? "");
+      bv = b.expenseDate instanceof Date ? b.expenseDate.getTime() : (b.expenseDate ?? "");
+    }
+    else if (sort === "property") { av = a.property.name; bv = b.property.name; }
+    else if (sort === "category") { av = a.category; bv = b.category; }
+    else if (sort === "amount") { av = a.amount; bv = b.amount; }
+    else if (sort === "vendor") { av = a.vendor ?? ""; bv = b.vendor ?? ""; }
+    else return 0;
+    return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   const categoryStyles: Record<string, string> = {
@@ -64,12 +79,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
           <table className="w-full min-w-[600px] text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
-                <th className="px-5 py-3.5">Date</th>
-                <th className="px-5 py-3.5">Property</th>
-                <th className="px-5 py-3.5">Category</th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="date" label="Date" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="property" label="Property" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="category" label="Category" /></Suspense></th>
                 <th className="px-5 py-3.5">Description</th>
-                <th className="px-5 py-3.5">Amount</th>
-                <th className="px-5 py-3.5">Vendor</th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="amount" label="Amount" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="vendor" label="Vendor" /></Suspense></th>
                 <th className="px-5 py-3.5">Receipt</th>
                 <th className="px-5 py-3.5"></th>
               </tr>

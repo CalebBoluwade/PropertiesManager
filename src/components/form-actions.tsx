@@ -12,12 +12,12 @@ export function FormActions({
   submitLabel,
   pendingLabel,
   onCancel,
-}: {
+}: Readonly<{
   pending: boolean;
   submitLabel: string;
   pendingLabel: string;
   onCancel: () => void;
-}) {
+}>) {
   return (
     <div className="flex gap-3 pt-2">
       <button

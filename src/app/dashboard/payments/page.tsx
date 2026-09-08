@@ -5,10 +5,11 @@ import { getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { getPayments } from "./actions";
 import { SearchInput } from "@/components/search-input";
+import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
-export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
+export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }) {
+  const { q, sort, dir } = await searchParams;
   const [isDemo, dateFormat] = await Promise.all([
     getDataMode().then((m) => m === "demo"),
     getDateFormat(),
@@ -19,13 +20,26 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         with: { lease: { with: { tenant: true, property: true } } },
         orderBy: (obligations, { desc }) => desc(obligations.dueDate),
       });
-  const obligations = q
+  const filteredObligations = q
     ? allObligations.filter((o) =>
         [o.lease.tenant.name, o.lease.property.name, o.status].some((v) =>
           v?.toLowerCase().includes(q.toLowerCase())
         )
       )
     : allObligations;
+  const asc = dir !== "desc";
+  const obligations = [...filteredObligations].sort((a, b) => {
+    let av: string | number = 0, bv: string | number = 0;
+    if (sort === "tenant") { av = a.lease.tenant.name; bv = b.lease.tenant.name; }
+    else if (sort === "property") { av = a.lease.property.name; bv = b.lease.property.name; }
+    else if (sort === "due") { av = a.dueDate instanceof Date ? a.dueDate.getTime() : String(a.dueDate); bv = b.dueDate instanceof Date ? b.dueDate.getTime() : String(b.dueDate); }
+    else if (sort === "amount") { av = a.amountDue; bv = b.amountDue; }
+    else if (sort === "paid") { av = a.amountPaid; bv = b.amountPaid; }
+    else if (sort === "outstanding") { av = a.amountDue - a.amountPaid; bv = b.amountDue - b.amountPaid; }
+    else if (sort === "status") { av = a.status; bv = b.status; }
+    else return 0;
+    return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
   const paymentRecords = isDemo ? [] : await getPayments();
 
   const statusStyles: Record<string, string> = {
@@ -61,13 +75,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           <table className="w-full min-w-180 text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
-                <th className="px-5 py-3.5">Tenant</th>
-                <th className="px-5 py-3.5">Property</th>
-                <th className="px-5 py-3.5">Due Date</th>
-                <th className="px-5 py-3.5">Amount Due</th>
-                <th className="px-5 py-3.5">Paid</th>
-                <th className="px-5 py-3.5">Outstanding</th>
-                <th className="px-5 py-3.5">Status</th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="tenant" label="Tenant" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="property" label="Property" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="due" label="Due Date" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="amount" label="Amount Due" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="paid" label="Paid" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="outstanding" label="Outstanding" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="status" label="Status" /></Suspense></th>
               </tr>
             </thead>
             <tbody>

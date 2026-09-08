@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:generate": "bunx drizzle-kit generate:pg --schema src/db/schema.ts",
+    "db:migrate": "bunx drizzle-kit migrate",
     "seed": "bunx tsx src/db/seed.ts"
   },
   "dependencies": {

@@ -4,10 +4,11 @@ import { money } from "@/lib/fx";
 import { getDataMode } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { SearchInput } from "@/components/search-input";
+import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
-export default async function PropertiesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
+export default async function PropertiesPage({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }) {
+  const { q, sort, dir } = await searchParams;
   const isDemo = (await getDataMode()) === "demo";
   const allProperties = isDemo
     ? DEMO.properties
@@ -15,13 +16,24 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
         with: { propertyType: true, units: true },
         orderBy: (properties, { desc }) => desc(properties.createdAt),
       });
-  const properties = q
+  const filtered = q
     ? allProperties.filter((p) =>
         [p.name, p.address, p.city, p.state, p.status].some((v) =>
           v?.toLowerCase().includes(q.toLowerCase())
         )
       )
     : allProperties;
+  const asc = dir !== "desc";
+  const properties = [...filtered].sort((a, b) => {
+    let av: string | number = 0, bv: string | number = 0;
+    if (sort === "name") { av = a.name; bv = b.name; }
+    else if (sort === "type") { av = a.propertyType.name; bv = b.propertyType.name; }
+    else if (sort === "units") { av = a.units.length; bv = b.units.length; }
+    else if (sort === "status") { av = a.status; bv = b.status; }
+    else if (sort === "value") { av = Number(a.currentValue ?? 0); bv = Number(b.currentValue ?? 0); }
+    else return 0;
+    return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
 
   return (
     <div className="space-y-6">
@@ -48,11 +60,11 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
-                <th className="px-5 py-3.5">Property</th>
-                <th className="px-5 py-3.5">Type</th>
-                <th className="px-5 py-3.5">Units</th>
-                <th className="px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5">Value</th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="name" label="Property" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="type" label="Type" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="units" label="Units" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="status" label="Status" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="value" label="Value" /></Suspense></th>
                 <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
