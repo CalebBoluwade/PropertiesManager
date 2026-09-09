@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
 import { setDataMode, setCurrency, setDateFormat, setExpenseCategories, type DataMode } from "@/lib/data-mode";
+import { resetLiveData } from "@/app/dashboard/actions";
 import { CURRENCIES, DATE_FORMATS, getCurrencySymbol } from "@/lib/fx";
 import { useSettings } from "@/components/providers";
 
@@ -70,6 +71,16 @@ export function SettingsClient({ dataMode }: Props) {
     const next = localCategories.filter((c) => c !== value);
     setLocalCategories(next);
     startTransition(() => setExpenseCategories(next));
+  }
+
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  async function handleReset() {
+    if (!confirmReset) { setConfirmReset(true); return; }
+    startTransition(async () => {
+      await resetLiveData();
+      setConfirmReset(false);
+    });
   }
 
   const isDemo = mode === "demo";
@@ -244,6 +255,36 @@ export function SettingsClient({ dataMode }: Props) {
               </button>
             </div>
           </section>
+          {/* Reset live data */}
+          {!isDemo && (
+            <section className="bg-white rounded-2xl border border-red-100 shadow-sm p-6">
+              <h2 className="text-sm font-semibold text-red-700">Reset live data</h2>
+              <p className="text-xs text-slate-400 mt-1 mb-5">
+                Permanently deletes all properties, tenants, payments, and expenses. This cannot be undone.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleReset}
+                  disabled={pending}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-40 ${
+                    confirmReset
+                      ? "bg-red-600 text-white hover:bg-red-700"
+                      : "border border-red-300 text-red-600 hover:bg-red-50"
+                  }`}
+                >
+                  {confirmReset ? "Yes, delete everything" : "Clear all data"}
+                </button>
+                {confirmReset && (
+                  <button
+                    onClick={() => setConfirmReset(false)}
+                    className="text-sm text-slate-400 hover:text-slate-600"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Right — summary */}

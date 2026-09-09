@@ -1,6 +1,8 @@
 "use server";
 
 import { db } from "@/db";
+import { revalidatePath } from "next/cache";
+import { tenants, payments, expenses, leases, rentObligations, units, properties, propertyTypes, propertyFieldValues, propertyTypeFields, documents, propertyPhotos } from "@/db/schema";
 
 export async function getPropertyTypes() {
   return db.query.propertyTypes.findMany({ orderBy: (t, { asc }) => asc(t.name) });
@@ -21,9 +23,25 @@ export async function getProperties() {
 }
 
 export async function getTenants() {
-  const tenants = await db.query.tenants.findMany({
+  const ts = await db.query.tenants.findMany({
     with: { property: true },
     orderBy: (t, { asc }) => asc(t.name),
   });
-  return tenants.map((t) => ({ id: t.id, label: `${t.name} — ${t.property.name}` }));
+  return ts.map((t) => ({ id: t.id, label: `${t.name} — ${t.property.name}` }));
+}
+
+export async function resetLiveData() {
+  await db.delete(payments);
+  await db.delete(rentObligations);
+  await db.delete(leases);
+  await db.delete(tenants);
+  await db.delete(expenses);
+  await db.delete(documents);
+  await db.delete(propertyPhotos);
+  await db.delete(propertyFieldValues);
+  await db.delete(units);
+  await db.delete(properties);
+  await db.delete(propertyTypeFields);
+  await db.delete(propertyTypes);
+  revalidatePath("/dashboard", "layout");
 }

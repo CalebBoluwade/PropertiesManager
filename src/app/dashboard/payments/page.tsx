@@ -8,7 +8,7 @@ import { SearchInput } from "@/components/search-input";
 import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
-export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }) {
+export default async function PaymentsPage({ searchParams }: Readonly<{ searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }>) {
   const { q, sort, dir } = await searchParams;
   const [isDemo, dateFormat] = await Promise.all([
     getDataMode().then((m) => m === "demo"),
