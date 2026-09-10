@@ -18,25 +18,12 @@ export function DashboardShell({ children, modal, user }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex">
+    <>
+      <div className="min-h-screen flex">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:flex-col md:shrink-0 md:sticky md:top-0 md:h-screen md:w-16 lg:w-60 transition-all duration-200">
+      <aside className="hidden md:flex md:flex-col md:shrink-0 md:sticky md:top-0 md:h-screen md:w-16 lg:w-60 transition-all duration-200 overflow-visible">
         <Sidebar user={user} />
       </aside>
-
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
-          <div className="w-64 shrink-0 h-full">
-            <Sidebar user={user} onNavigate={() => setMobileOpen(false)} />
-          </div>
-          <button
-            className="flex-1 bg-black/40 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-          />
-        </div>
-      )}
 
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile topbar */}
@@ -57,6 +44,20 @@ export function DashboardShell({ children, modal, user }: DashboardShellProps) {
       </div>
 
       {modal}
-    </div>
+      </div>
+
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          <div className="w-72 max-w-[85vw] h-full overflow-hidden">
+            <Sidebar user={user} onNavigate={() => setMobileOpen(false)} mobile />
+          </div>
+          <div
+            className="flex-1 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+          />
+        </div>
+      )}
+    </>
   );
 }
