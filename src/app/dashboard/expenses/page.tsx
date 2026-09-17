@@ -8,6 +8,20 @@ import { SearchInput } from "@/components/search-input";
 import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
+type ExpenseListItem = {
+  id: string;
+  propertyId: string;
+  tenantId: string | null;
+  category: string;
+  description: string;
+  amount: number;
+  expenseDate: Date;
+  vendor: string | null;
+  receiptUrl: string | null;
+  property: { id: string; name: string; currency?: string };
+  tenant: { id: string; name: string } | null;
+};
+
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string; propertyId?: string; tenantId?: string }> }) {
   const { q, sort, dir, propertyId, tenantId } = await searchParams;
   const [isDemo, dateFormat, currency] = await Promise.all([
@@ -15,13 +29,13 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     getDateFormat(),
     getCurrency(),
   ]);
-  const allExpenses = isDemo ? DEMO.expenses : await getExpenses();
+  const allExpenses: ExpenseListItem[] = isDemo ? [...DEMO.expenses] : await getExpenses();
   const filtered = (() => {
     let list = allExpenses as typeof allExpenses;
     if (propertyId) list = list.filter((e) => e.propertyId === propertyId);
-    if (tenantId) list = list.filter((e) => (e as { tenantId?: string | null }).tenantId === tenantId);
+    if (tenantId) list = list.filter((e) => e.tenantId === tenantId);
     if (q) list = list.filter((e) =>
-      [e.category, e.description, e.vendor, e.property.name, (e as { tenant?: { name: string } | null }).tenant?.name].some((v) =>
+      [e.category, e.description, e.vendor, e.property.name, e.tenant?.name].some((v) =>
         v?.toLowerCase().includes(q.toLowerCase())
       )
     );
@@ -38,7 +52,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     else if (sort === "category") { av = a.category; bv = b.category; }
     else if (sort === "amount") { av = a.amount; bv = b.amount; }
     else if (sort === "vendor") { av = a.vendor ?? ""; bv = b.vendor ?? ""; }
-    else if (sort === "tenant") { av = (a as { tenant?: { name: string } | null }).tenant?.name ?? ""; bv = (b as { tenant?: { name: string } | null }).tenant?.name ?? ""; }
+    else if (sort === "tenant") { av = a.tenant?.name ?? ""; bv = b.tenant?.name ?? ""; }
     else return 0;
     return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
   });
@@ -115,7 +129,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                       {expense.category.replaceAll("_", " ").toLowerCase()}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-slate-500">{(expense as { tenant?: { name: string } | null }).tenant?.name ?? "—"}</td>
+                  <td className="px-5 py-4 text-slate-500">{expense.tenant?.name ?? "—"}</td>
                   <td className="px-5 py-4 text-slate-600">{expense.description || "—"}</td>
                   <td className="px-5 py-4 font-medium text-slate-800">{money(expense.amount, currency)}</td>
                   <td className="px-5 py-4 text-slate-500">{expense.vendor || "—"}</td>

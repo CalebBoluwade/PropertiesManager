@@ -8,6 +8,20 @@ import { SearchInput } from "@/components/search-input";
 import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
+type RentObligationListItem = {
+  id: string;
+  propertyId: string;
+  unitId: string | null;
+  amountDue: number;
+  amountPaid: number;
+  status: string;
+  dueDate: Date;
+  lease: {
+    tenant: { id?: string; name: string };
+    property: { name: string };
+  };
+};
+
 export default async function PaymentsPage({ searchParams }: Readonly<{ searchParams: Promise<{ q?: string; sort?: string; dir?: string; propertyId?: string; tenantId?: string }> }>) {
   const { q, sort, dir, propertyId, tenantId } = await searchParams;
   const [isDemo, dateFormat, currency] = await Promise.all([
@@ -15,8 +29,8 @@ export default async function PaymentsPage({ searchParams }: Readonly<{ searchPa
     getDateFormat(),
     getCurrency(),
   ]);
-  const allObligations = isDemo
-    ? DEMO.obligations
+  const allObligations: RentObligationListItem[] = isDemo
+    ? [...DEMO.obligations]
     : await db.query.rentObligations.findMany({
         with: { lease: { with: { tenant: true, property: true } } },
         orderBy: (obligations, { desc }) => desc(obligations.dueDate),
@@ -24,7 +38,7 @@ export default async function PaymentsPage({ searchParams }: Readonly<{ searchPa
   const filteredObligations = (() => {
     let list = allObligations as typeof allObligations;
     if (propertyId) list = list.filter((o) => o.propertyId === propertyId);
-    if (tenantId) list = list.filter((o) => (o.lease as { tenant?: { id: string } }).tenant?.id === tenantId);
+    if (tenantId) list = list.filter((o) => o.lease.tenant.id === tenantId);
     if (q) list = list.filter((o) =>
       [o.lease.tenant.name, o.lease.property.name, o.status].some((v) => v?.toLowerCase().includes(q.toLowerCase()))
     );
