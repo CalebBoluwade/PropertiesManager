@@ -119,6 +119,7 @@ export async function createPayment(formData: FormData) {
   }
 
   revalidatePath("/dashboard/payments");
+  revalidatePath(`/dashboard/tenants/${lease.tenantId}`);
   revalidatePath("/dashboard");
 }
 
@@ -158,6 +159,7 @@ export async function recordPayment(id: string, formData: FormData) {
 }
 
 export async function updatePayment(id: string, formData: FormData) {
+  const existingPayment = await db.query.payments.findFirst({ where: eq(payments.id, id) });
   const paidDate = (formData.get("paidDate") as string) || new Date().toISOString().slice(0, 10);
   await db
     .update(payments)
@@ -169,12 +171,21 @@ export async function updatePayment(id: string, formData: FormData) {
     .where(eq(payments.id, id));
 
   revalidatePath("/dashboard/payments");
+  if (existingPayment?.leaseId) {
+    const lease = await db.query.leases.findFirst({ where: eq(leases.id, existingPayment.leaseId) });
+    if (lease) revalidatePath(`/dashboard/tenants/${lease.tenantId}`);
+  }
   revalidatePath("/dashboard");
 }
 
 export async function deletePayment(id: string) {
+  const payment = await db.query.payments.findFirst({ where: eq(payments.id, id) });
   await db.delete(payments).where(eq(payments.id, id));
   revalidatePath("/payments");
+  if (payment?.leaseId) {
+    const lease = await db.query.leases.findFirst({ where: eq(leases.id, payment.leaseId) });
+    if (lease) revalidatePath(`/dashboard/tenants/${lease.tenantId}`);
+  }
   revalidatePath("/");
 }
 

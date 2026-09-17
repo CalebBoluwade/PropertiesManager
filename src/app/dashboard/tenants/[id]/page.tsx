@@ -1,29 +1,50 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/db";
-import { money } from "@/lib/fx";
+import { formatDate, money } from "@/lib/fx";
 import { eq } from "drizzle-orm";
 import { tenants as tenantsTable } from "@/db/schema";
-import { getCurrency, getDataMode } from "@/lib/data-mode";
+import { getCurrency, getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 
 type Obligation = { id: string; amountPaid: number; amountDue: number };
 type Expense = { id: string; description: string; category: string; amount: number };
+type Payment = {
+  id: string;
+  amount: number;
+  paymentDate: Date | null;
+  status: string;
+  method: string;
+  reference: string | null;
+  notes: string | null;
+};
 
 export default async function TenantDetailPage({ params }: Readonly<{ params: Promise<{ id: string }> }>) {
   const { id } = await params;
-  const [dataMode, currency] = await Promise.all([getDataMode(), getCurrency()]);
+  const [dataMode, currency, dateFormat] = await Promise.all([getDataMode(), getCurrency(), getDateFormat()]);
   const isDemo = dataMode === "demo";
 
   const tenant = isDemo
     ? (() => {
         const t = DEMO.tenants.find((t) => t.id === id) ?? null;
         if (!t) return null;
-        return { ...t, expenses: [] as Expense[], obligations: [] as Obligation[] };
+        const payments: Payment[] = DEMO.obligations
+          .filter((o) => o.lease.tenant.name === t.name && o.amountPaid > 0)
+          .map((o) => ({
+            id: `${o.id}-payment`,
+            amount: o.amountPaid,
+            paymentDate: o.dueDate,
+            status: o.status,
+            method: "BANK_TRANSFER",
+            reference: null,
+            notes: null,
+          }))
+          .sort((a, b) => (b.paymentDate?.getTime() ?? 0) - (a.paymentDate?.getTime() ?? 0));
+        return { ...t, expenses: [] as Expense[], obligations: [] as Obligation[], payments };
       })()
     : await db.query.tenants.findFirst({
         where: eq(tenantsTable.id, id),
-        with: { property: true, leases: { with: { obligations: true } } },
+        with: { property: true, leases: { with: { obligations: true, payments: true } } },
       }).then(async (t) => {
         if (!t) return null;
         const expenses = await db.query.expenses.findMany({
@@ -31,7 +52,10 @@ export default async function TenantDetailPage({ params }: Readonly<{ params: Pr
           orderBy: (e, { desc }) => [desc(e.expenseDate)],
         });
         const obligations = t.leases.flatMap((l) => l.obligations);
-        return { ...t, expenses, obligations };
+        const payments = t.leases
+          .flatMap((l) => l.payments)
+          .sort((a, b) => (b.paymentDate?.getTime() ?? 0) - (a.paymentDate?.getTime() ?? 0));
+        return { ...t, expenses, obligations, payments };
       }) ?? null;
 
   if (!tenant) notFound();
@@ -129,6 +153,54 @@ export default async function TenantDetailPage({ params }: Readonly<{ params: Pr
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs">
+        <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3.5">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payment History</h2>
+            <p className="mt-1 text-xs text-slate-500">{tenant.payments.length} recorded transaction{tenant.payments.length === 1 ? "" : "s"}</p>
+          </div>
+          <Link href={`/dashboard/payments?tenantId=${tenant.id}`} className="text-xs font-medium text-indigo-500 hover:underline">
+            View all payments
+          </Link>
+        </div>
+        {tenant.payments.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-150 text-left text-sm">
+              <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="px-5 py-3.5">Date</th>
+                  <th className="px-5 py-3.5">Amount</th>
+                  <th className="px-5 py-3.5">Method</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5">Reference / Notes</th>
+                  <th className="px-5 py-3.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {tenant.payments.map((payment) => (
+                  <tr key={payment.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                    <td className="px-5 py-4 text-xs text-slate-500">{formatDate(payment.paymentDate, dateFormat)}</td>
+                    <td className="px-5 py-4 font-medium text-slate-800">{money(payment.amount, currency)}</td>
+                    <td className="px-5 py-4 text-slate-600">{payment.method.replaceAll("_", " ").toLowerCase()}</td>
+                    <td className="px-5 py-4">
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${payment.status === "PAID" ? "bg-emerald-50 text-emerald-700" : payment.status === "PARTIALLY_PAID" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"}`}>
+                        {payment.status.replaceAll("_", " ").toLowerCase()}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-slate-500">{payment.reference || payment.notes || "—"}</td>
+                    <td className="px-5 py-4 text-right">
+                      {!isDemo && <Link href={`/dashboard/payments/edit/${payment.id}`} className="text-xs text-indigo-500 hover:underline">Edit</Link>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="px-5 py-12 text-center text-sm text-slate-400">No payments have been recorded for this tenant yet.</p>
+        )}
       </div>
     </div>
   );
