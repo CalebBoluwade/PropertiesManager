@@ -1,27 +1,32 @@
 import Link from "next/link";
 import { money, formatDate } from "@/lib/fx";
 import { getExpenses } from "./actions";
-import { getDataMode, getDateFormat } from "@/lib/data-mode";
+import { getCurrency, getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { MediaGrid } from "@/components/media-grid";
 import { SearchInput } from "@/components/search-input";
 import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
-export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }) {
-  const { q, sort, dir } = await searchParams;
-  const [isDemo, dateFormat] = await Promise.all([
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ q?: string; sort?: string; dir?: string; propertyId?: string; tenantId?: string }> }) {
+  const { q, sort, dir, propertyId, tenantId } = await searchParams;
+  const [isDemo, dateFormat, currency] = await Promise.all([
     getDataMode().then((m) => m === "demo"),
     getDateFormat(),
+    getCurrency(),
   ]);
   const allExpenses = isDemo ? DEMO.expenses : await getExpenses();
-  const filtered = q
-    ? allExpenses.filter((e) =>
-        [e.category, e.description, e.vendor, e.property.name].some((v) =>
-          v?.toLowerCase().includes(q.toLowerCase())
-        )
+  const filtered = (() => {
+    let list = allExpenses as typeof allExpenses;
+    if (propertyId) list = list.filter((e) => e.propertyId === propertyId);
+    if (tenantId) list = list.filter((e) => (e as { tenantId?: string | null }).tenantId === tenantId);
+    if (q) list = list.filter((e) =>
+      [e.category, e.description, e.vendor, e.property.name, (e as { tenant?: { name: string } | null }).tenant?.name].some((v) =>
+        v?.toLowerCase().includes(q.toLowerCase())
       )
-    : allExpenses;
+    );
+    return list;
+  })();
   const asc = dir !== "desc";
   const expenses = [...filtered].sort((a, b) => {
     let av: string | number = 0, bv: string | number = 0;
@@ -33,6 +38,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     else if (sort === "category") { av = a.category; bv = b.category; }
     else if (sort === "amount") { av = a.amount; bv = b.amount; }
     else if (sort === "vendor") { av = a.vendor ?? ""; bv = b.vendor ?? ""; }
+    else if (sort === "tenant") { av = (a as { tenant?: { name: string } | null }).tenant?.name ?? ""; bv = (b as { tenant?: { name: string } | null }).tenant?.name ?? ""; }
     else return 0;
     return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
   });
@@ -70,7 +76,10 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       {expenses.length > 0 && (
         <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5 shadow-xs">
           <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">Total Expenses</p>
-          <p className="text-3xl font-bold text-slate-900">{money(totalExpenses, "NGN")}</p>
+          <p className="text-3xl font-bold text-slate-900">{money(totalExpenses, currency)}</p>
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
+            Formula: Σ expense.amount for filtered rows
+          </p>
         </div>
       )}
 
@@ -82,6 +91,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 <th className="px-5 py-3.5"><Suspense><SortHeader column="date" label="Date" /></Suspense></th>
                 <th className="px-5 py-3.5"><Suspense><SortHeader column="property" label="Property" /></Suspense></th>
                 <th className="px-5 py-3.5"><Suspense><SortHeader column="category" label="Category" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="tenant" label="Tenant" /></Suspense></th>
                 <th className="px-5 py-3.5">Description</th>
                 <th className="px-5 py-3.5"><Suspense><SortHeader column="amount" label="Amount" /></Suspense></th>
                 <th className="px-5 py-3.5"><Suspense><SortHeader column="vendor" label="Vendor" /></Suspense></th>
@@ -105,8 +115,9 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                       {expense.category.replaceAll("_", " ").toLowerCase()}
                     </span>
                   </td>
+                  <td className="px-5 py-4 text-slate-500">{(expense as { tenant?: { name: string } | null }).tenant?.name ?? "—"}</td>
                   <td className="px-5 py-4 text-slate-600">{expense.description || "—"}</td>
-                  <td className="px-5 py-4 font-medium text-slate-800">{money(expense.amount, expense.currency)}</td>
+                  <td className="px-5 py-4 font-medium text-slate-800">{money(expense.amount, currency)}</td>
                   <td className="px-5 py-4 text-slate-500">{expense.vendor || "—"}</td>
                   <td className="px-5 py-4">
                     {expense.receiptUrl ? (
@@ -120,7 +131,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
               ))}
               {!expenses.length && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-16 text-center text-sm text-slate-400">
+                  <td colSpan={9} className="px-5 py-16 text-center text-sm text-slate-400">
                     No expenses yet. <Link href="/dashboard/expenses/new" className="text-indigo-500 hover:underline">Add one</Link>.
                   </td>
                 </tr>

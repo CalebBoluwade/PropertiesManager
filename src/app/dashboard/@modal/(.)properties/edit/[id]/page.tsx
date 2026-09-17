@@ -10,9 +10,7 @@ export default async function EditPropertyModal({ params }: { params: Promise<{ 
   const isDemo = (await getDataMode()) === "demo";
   const [property, propertyTypes] = await Promise.all([
     isDemo ? DEMO.properties.find((p) => p.id === id) ?? null : getProperty(id),
-    isDemo
-      ? [{ id: "demo-type-1", name: "Residential" }, { id: "demo-type-2", name: "Commercial" }, { id: "demo-type-3", name: "Land" }]
-      : getPropertyTypes(),
+    getPropertyTypes(),
   ]);
   if (!property) notFound();
   return <EditPropertyForm property={property} propertyTypes={propertyTypes} />;

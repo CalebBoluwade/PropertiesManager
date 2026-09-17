@@ -6,6 +6,8 @@ import { and, eq, gte, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { payments, leases, rentObligations, tenants, units, properties } from "@/db/schema";
 import { getPaymentStatus } from "@/lib/fx";
+import { getDataMode } from "@/lib/data-mode";
+import { DEMO } from "@/lib/demo-data";
 
 export async function getPayments() {
   const rows = await db.query.payments.findMany({
@@ -44,6 +46,34 @@ export async function getPayment(id: string) {
 
 /** Active leases with their unit/property for billing forms. */
 export async function getActiveTenantsForBilling() {
+  if ((await getDataMode()) === "demo") {
+    const rows = new Map<string, {
+      id: string;
+      tenantName: string;
+      unitId: string;
+      unitNumber: string;
+      propertyId: string;
+      propertyName: string;
+    }>();
+
+    for (const obligation of DEMO.obligations) {
+      if (rows.has(obligation.leaseId)) continue;
+      const property = DEMO.properties.find((item) => item.id === obligation.propertyId);
+      const unit = property?.units.find((item) => item.id === obligation.unitId);
+      if (!property || !unit) continue;
+      rows.set(obligation.leaseId, {
+        id: obligation.leaseId,
+        tenantName: obligation.lease.tenant.name,
+        unitId: unit.id,
+        unitNumber: unit.unitNumber,
+        propertyId: property.id,
+        propertyName: property.name,
+      });
+    }
+
+    return Array.from(rows.values());
+  }
+
   const today = new Date();
   const rows = await db
     .select({

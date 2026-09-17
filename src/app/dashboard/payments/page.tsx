@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { money, formatDate } from "@/lib/fx";
-import { getDataMode, getDateFormat } from "@/lib/data-mode";
+import { getCurrency, getDataMode, getDateFormat } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { getPayments } from "./actions";
 import { SearchInput } from "@/components/search-input";
 import { SortHeader } from "@/components/sort-header";
 import { Suspense } from "react";
 
-export default async function PaymentsPage({ searchParams }: Readonly<{ searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }>) {
-  const { q, sort, dir } = await searchParams;
-  const [isDemo, dateFormat] = await Promise.all([
+export default async function PaymentsPage({ searchParams }: Readonly<{ searchParams: Promise<{ q?: string; sort?: string; dir?: string; propertyId?: string; tenantId?: string }> }>) {
+  const { q, sort, dir, propertyId, tenantId } = await searchParams;
+  const [isDemo, dateFormat, currency] = await Promise.all([
     getDataMode().then((m) => m === "demo"),
     getDateFormat(),
+    getCurrency(),
   ]);
   const allObligations = isDemo
     ? DEMO.obligations
@@ -20,13 +21,15 @@ export default async function PaymentsPage({ searchParams }: Readonly<{ searchPa
         with: { lease: { with: { tenant: true, property: true } } },
         orderBy: (obligations, { desc }) => desc(obligations.dueDate),
       });
-  const filteredObligations = q
-    ? allObligations.filter((o) =>
-        [o.lease.tenant.name, o.lease.property.name, o.status].some((v) =>
-          v?.toLowerCase().includes(q.toLowerCase())
-        )
-      )
-    : allObligations;
+  const filteredObligations = (() => {
+    let list = allObligations as typeof allObligations;
+    if (propertyId) list = list.filter((o) => o.propertyId === propertyId);
+    if (tenantId) list = list.filter((o) => (o.lease as { tenant?: { id: string } }).tenant?.id === tenantId);
+    if (q) list = list.filter((o) =>
+      [o.lease.tenant.name, o.lease.property.name, o.status].some((v) => v?.toLowerCase().includes(q.toLowerCase()))
+    );
+    return list;
+  })();
   const asc = dir !== "desc";
   const obligations = [...filteredObligations].sort((a, b) => {
     let av: string | number = 0, bv: string | number = 0;
@@ -70,6 +73,12 @@ export default async function PaymentsPage({ searchParams }: Readonly<{ searchPa
         </div>
       </div>
 
+      <div className="rounded-2xl border border-slate-100 bg-white px-5 py-3 shadow-xs">
+        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
+          Formula: outstanding = amountDue − amountPaid; status is derived from due date + payment totals
+        </p>
+      </div>
+
       <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full min-w-180 text-left text-sm">
@@ -94,10 +103,10 @@ export default async function PaymentsPage({ searchParams }: Readonly<{ searchPa
                     <td className="px-5 py-4 text-slate-500 text-xs">
                       {formatDate(obligation.dueDate, dateFormat)}
                     </td>
-                    <td className="px-5 py-4 text-slate-800">{money(obligation.amountDue, "NGN")}</td>
-                    <td className="px-5 py-4 text-slate-600">{money(obligation.amountPaid, "NGN")}</td>
+                    <td className="px-5 py-4 text-slate-800">{money(obligation.amountDue, currency)}</td>
+                    <td className="px-5 py-4 text-slate-600">{money(obligation.amountPaid, currency)}</td>
                     <td className={`px-5 py-4 font-medium ${outstanding > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                      {money(outstanding, "NGN")}
+                      {money(outstanding, currency)}
                     </td>
                     <td className="px-5 py-4">
                       <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[obligation.status] ?? "bg-slate-100 text-slate-600"}`}>
@@ -140,7 +149,7 @@ export default async function PaymentsPage({ searchParams }: Readonly<{ searchPa
                   <tr key={p.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-4 text-xs text-slate-500">{formatDate(p.paymentDate, dateFormat)}</td>
                     <td className="px-5 py-4 text-slate-600">{p.unit?.property.name ?? "—"}</td>
-                    <td className="px-5 py-4 font-medium text-slate-800">{money(p.amount, "NGN")}</td>
+                    <td className="px-5 py-4 font-medium text-slate-800">{money(p.amount, currency)}</td>
                     <td className="px-5 py-4 text-slate-500">{p.notes || "—"}</td>
                     <td className="px-5 py-4">
                       <Link href={`/dashboard/payments/edit/${p.id}`} className="text-xs text-indigo-500 hover:underline">Edit</Link>

@@ -3,8 +3,20 @@
 import { db } from "@/db";
 import { revalidatePath } from "next/cache";
 import { tenants, payments, expenses, leases, rentObligations, units, properties, propertyTypes, propertyFieldValues, propertyTypeFields, documents, propertyPhotos } from "@/db/schema";
+import { getDataMode } from "@/lib/data-mode";
+import { DEMO } from "@/lib/demo-data";
 
 export async function getPropertyTypes() {
+  if ((await getDataMode()) === "demo") {
+    return Array.from(
+      new Map(
+        DEMO.properties.map((property) => [
+          property.propertyType.id,
+          { id: property.propertyType.id, name: property.propertyType.name },
+        ])
+      ).values()
+    );
+  }
   return db.query.propertyTypes.findMany({ orderBy: (t, { asc }) => asc(t.name) });
 }
 
@@ -18,11 +30,20 @@ export async function getVacantUnits() {
 }
 
 export async function getProperties() {
+  if ((await getDataMode()) === "demo") {
+    return DEMO.properties.map((property) => ({ id: property.id, label: property.name }));
+  }
   const props = await db.query.properties.findMany({ orderBy: (p, { asc }) => asc(p.name) });
   return props.map((p) => ({ id: p.id, label: p.name }));
 }
 
 export async function getTenants() {
+  if ((await getDataMode()) === "demo") {
+    return DEMO.tenants.map((tenant) => ({
+      id: tenant.id,
+      label: `${tenant.name} — ${tenant.property.name}`,
+    }));
+  }
   const ts = await db.query.tenants.findMany({
     with: { property: true },
     orderBy: (t, { asc }) => asc(t.name),

@@ -9,6 +9,7 @@ import { createProperty } from "@/app/dashboard/properties/actions";
 import { uploadPhotos } from "@/app/photos/actions";
 import { COUNTRIES } from "@/lib/countries";
 import { FormActions } from "@/components/form-actions";
+import { useCurrency } from "@/components/providers";
 
 const RESIDENTIAL_UNIT_TYPES = ["Studio","1 Bedroom","2 Bedroom","3 Bedroom","4 Bedroom","5+ Bedroom","Duplex","Penthouse","Self-Contain"];
 const COMMERCIAL_UNIT_TYPES = ["Open Plan Office","Private Office","Shop","Warehouse","Showroom","Restaurant Space","Co-working Space","Storage Unit"];
@@ -32,7 +33,6 @@ type PropertyFormValues = {
   defaultUnitType?: string;
   purchasePrice?: number;
   currentValue?: number;
-  currency?: string;
   notes?: string;
 };
 
@@ -44,6 +44,7 @@ export function NewPropertyForm({ propertyTypes }: Readonly<{ propertyTypes: { i
   const [pending, startTransition] = useTransition();
   const [media, setMedia] = useState<MediaFile[]>([]);
   const router = useRouter();
+  const currency = useCurrency();
 
   const selectedTypeId = watch("propertyTypeId");
   const selectedType = propertyTypes.find((t) => t.id === selectedTypeId);
@@ -127,12 +128,12 @@ export function NewPropertyForm({ propertyTypes }: Readonly<{ propertyTypes: { i
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="purchasePrice" className={lbl}>Purchase Price (NGN)</label>
+            <label htmlFor="purchasePrice" className={lbl}>Purchase Price ({currency})</label>
             <input id="purchasePrice" type="number" min={0} step="0.01" className={inp} placeholder="0"
               {...register("purchasePrice", { valueAsNumber: true })} />
           </div>
           <div>
-            <label htmlFor="currentValue" className={lbl}>Current Value (NGN)</label>
+            <label htmlFor="currentValue" className={lbl}>Current Value ({currency})</label>
             <input id="currentValue" type="number" min={0} step="0.01" className={inp} placeholder="0"
               {...register("currentValue", { valueAsNumber: true })} />
           </div>

@@ -7,6 +7,7 @@ import { Modal } from "@/components/modal";
 import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createTenant } from "@/app/dashboard/tenants/actions";
 import { FormActions } from "@/components/form-actions";
+import { useCurrency } from "@/components/providers";
 
 type TenantFormValues = {
   name: string;
@@ -27,6 +28,7 @@ export function NewTenantForm({ properties }: { properties: { id: string; name: 
   const [pending, startTransition] = useTransition();
   const [docs, setDocs] = useState<MediaFile[]>([]);
   const router = useRouter();
+  const currency = useCurrency();
 
   function onSubmit(data: TenantFormValues) {
     const fd = new FormData();
@@ -71,12 +73,12 @@ export function NewTenantForm({ properties }: { properties: { id: string; name: 
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="monthlyRent" className={lbl}>Monthly Rent (NGN)</label>
+            <label htmlFor="monthlyRent" className={lbl}>Monthly Rent ({currency})</label>
             <input id="monthlyRent" type="number" min={0} step="0.01" className={inp} placeholder="0"
               {...register("monthlyRent", { valueAsNumber: true })} />
           </div>
           <div>
-            <label htmlFor="securityDeposit" className={lbl}>Security Deposit (NGN)</label>
+            <label htmlFor="securityDeposit" className={lbl}>Security Deposit ({currency})</label>
             <input id="securityDeposit" type="number" min={0} step="0.01" className={inp} placeholder="0"
               {...register("securityDeposit", { valueAsNumber: true })} />
           </div>

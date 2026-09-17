@@ -7,6 +7,7 @@ import { Modal } from "@/components/modal";
 import { updateProperty } from "@/app/dashboard/properties/actions";
 import { COUNTRIES } from "@/lib/countries";
 import { FormActions } from "@/components/form-actions";
+import { useCurrency } from "@/components/providers";
 
 type PropertyFormValues = {
   name: string;
@@ -41,6 +42,7 @@ export function EditPropertyForm({ property, propertyTypes }: { property: Proper
   });
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const currency = useCurrency();
 
   function onSubmit(data: PropertyFormValues) {
     const fd = new FormData();
@@ -92,11 +94,11 @@ export function EditPropertyForm({ property, propertyTypes }: { property: Proper
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="purchasePrice" className={lbl}>Purchase Price (NGN)</label>
+            <label htmlFor="purchasePrice" className={lbl}>Purchase Price ({currency})</label>
             <input id="purchasePrice" type="number" min={0} step="0.01" className={inp} {...register("purchasePrice", { valueAsNumber: true })} />
           </div>
           <div>
-            <label htmlFor="currentValue" className={lbl}>Current Value (NGN)</label>
+            <label htmlFor="currentValue" className={lbl}>Current Value ({currency})</label>
             <input id="currentValue" type="number" min={0} step="0.01" className={inp} {...register("currentValue", { valueAsNumber: true })} />
           </div>
         </div>

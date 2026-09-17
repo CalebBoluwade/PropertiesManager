@@ -4,16 +4,18 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { expenses } from "@/db/schema";
+import { getCurrency } from "@/lib/data-mode";
 
 export async function getExpenses() {
   const rows = await db.query.expenses.findMany({
-    with: { property: true },
+    with: { property: true, tenant: true },
     orderBy: (e, { desc }) => [desc(e.createdAt)],
   });
   return rows;
 }
 
 export async function createExpense(formData: FormData) {
+  const currency = await getCurrency();
   const dateStr = formData.get("date") as string;
   const receiptFile = formData.get("receipt");
   let receiptUrl: string | null = null;
@@ -23,8 +25,10 @@ export async function createExpense(formData: FormData) {
 
   await db.insert(expenses).values({
     propertyId: String(formData.get("propertyId") || ""),
+    tenantId: (formData.get("tenantId") as string) || null,
     category: String(formData.get("category") || "OTHER"),
     amount: Number(formData.get("amount") || 0),
+    currency,
     expenseDate: dateStr ? new Date(dateStr) : new Date(),
     description: String(formData.get("description") || ""),
     receiptUrl,
@@ -41,6 +45,7 @@ export async function updateExpense(id: string, formData: FormData) {
     .update(expenses)
     .set({
       propertyId: String(formData.get("propertyId") || ""),
+      tenantId: (formData.get("tenantId") as string) || null,
       category: String(formData.get("category") || "OTHER"),
       amount: Number(formData.get("amount") || 0),
       expenseDate: dateStr ? new Date(dateStr) : new Date(),

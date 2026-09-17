@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { setDataMode, setCurrency, setDateFormat, setExpenseCategories, type DataMode } from "@/lib/data-mode";
 import { resetLiveData } from "@/app/dashboard/actions";
@@ -22,12 +23,14 @@ const ALL_CATEGORIES = [
 
 interface Props {
   dataMode: DataMode;
+  currencyLocked: boolean;
 }
 
-export function SettingsClient({ dataMode }: Props) {
+export function SettingsClient({ dataMode, currencyLocked }: Props) {
   const { currency, dateFormat, expenseCategories } = useSettings();
   const [pending, startTransition] = useTransition();
   const [mode, setMode] = useState<DataMode>(dataMode);
+  const router = useRouter();
 
   // local mirrors so UI updates instantly
   const [localCurrency, setLocalCurrency] = useState(currency);
@@ -41,8 +44,12 @@ export function SettingsClient({ dataMode }: Props) {
   }
 
   function handleCurrency(code: string) {
+    if (currencyLocked) return;
     setLocalCurrency(code);
-    startTransition(() => setCurrency(code));
+    startTransition(async () => {
+      await setCurrency(code);
+      router.refresh();
+    });
   }
 
   function handleDateFormat(fmt: string) {
@@ -138,7 +145,9 @@ export function SettingsClient({ dataMode }: Props) {
           <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
             <h2 className="text-sm font-semibold text-slate-700">Currency</h2>
             <p className="text-xs text-slate-400 mt-1 mb-5">
-              All monetary values across the app will display in this currency.
+              {currencyLocked
+                ? "This currency is locked and is used for every monetary value across the app."
+                : "Choose the currency for every monetary value across the app. This choice is permanent."}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {CURRENCIES.map((c) => {
@@ -147,11 +156,11 @@ export function SettingsClient({ dataMode }: Props) {
                   <button
                     key={c.code}
                     onClick={() => handleCurrency(c.code)}
-                    disabled={pending}
+                    disabled={pending || currencyLocked}
                     className={`flex items-center justify-between rounded-xl border px-4 py-3.5 text-sm transition-colors text-left ${
                       active
                         ? "border-indigo-500 bg-indigo-50 text-indigo-700 font-medium"
-                        : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                        : "border-slate-200 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     }`}
                   >
                     <span>{c.label}</span>

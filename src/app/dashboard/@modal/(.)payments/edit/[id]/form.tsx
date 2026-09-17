@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { updatePayment } from "@/app/dashboard/payments/actions";
+import { useCurrency } from "@/components/providers";
 
 type PaymentFormValues = {
   amount: number;
@@ -27,6 +28,7 @@ export function EditPaymentForm({ payment }: { payment: Payment }) {
   });
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const currency = useCurrency();
 
   function onSubmit(data: PaymentFormValues) {
     const fd = new FormData();
@@ -39,7 +41,7 @@ export function EditPaymentForm({ payment }: { payment: Payment }) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="amount" className={lbl}>Amount (NGN) *</label>
+            <label htmlFor="amount" className={lbl}>Amount ({currency}) *</label>
             <input id="amount" type="number" min={0} step="0.01" className={inp}
               {...register("amount", { required: "Required", valueAsNumber: true })} />
             {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}

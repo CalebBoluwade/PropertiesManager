@@ -140,6 +140,7 @@ export const expenses = sqliteTable("expenses", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   propertyId: text("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
   unitId: text("unit_id").references(() => units.id),
+  tenantId: text("tenant_id").references(() => tenants.id),
   category: text("category").notNull(),
   description: text("description").notNull(),
   amount: real("amount").notNull(),
@@ -196,6 +197,7 @@ export const tenantRelations = relations(tenants, ({ one, many }) => ({
 export const expenseRelations = relations(expenses, ({ one }) => ({
   property: one(properties, { fields: [expenses.propertyId], references: [properties.id] }),
   unit: one(units, { fields: [expenses.unitId], references: [units.id] }),
+  tenant: one(tenants, { fields: [expenses.tenantId], references: [tenants.id] }),
 }));
 
 export const paymentRelations = relations(payments, ({ one }) => ({

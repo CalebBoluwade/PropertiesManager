@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { updateTenant } from "@/app/dashboard/tenants/actions";
 import { FormActions } from "@/components/form-actions";
+import { useCurrency } from "@/components/providers";
 
 type TenantFormValues = {
   name: string;
@@ -38,6 +39,7 @@ export function EditTenantForm({ tenant, properties }: { tenant: Tenant; propert
   });
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const currency = useCurrency();
 
   function onSubmit(data: TenantFormValues) {
     const fd = new FormData();
@@ -78,11 +80,11 @@ export function EditTenantForm({ tenant, properties }: { tenant: Tenant; propert
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="monthlyRent" className={lbl}>Monthly Rent (NGN)</label>
+            <label htmlFor="monthlyRent" className={lbl}>Monthly Rent ({currency})</label>
             <input id="monthlyRent" type="number" min={0} step="0.01" className={inp} {...register("monthlyRent", { valueAsNumber: true })} />
           </div>
           <div>
-            <label htmlFor="securityDeposit" className={lbl}>Security Deposit (NGN)</label>
+            <label htmlFor="securityDeposit" className={lbl}>Security Deposit ({currency})</label>
             <input id="securityDeposit" type="number" min={0} step="0.01" className={inp} {...register("securityDeposit", { valueAsNumber: true })} />
           </div>
         </div>

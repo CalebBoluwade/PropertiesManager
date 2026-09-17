@@ -10,12 +10,13 @@ import {
   propertyPhotos,
   units,
 } from "@/db/schema";
+import { getCurrency } from "@/lib/data-mode";
 
 export async function createProperty(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   const address = String(formData.get("address") || "").trim();
   const propertyTypeId = String(formData.get("propertyTypeId") || "");
-  const currency = String(formData.get("currency") || "NGN");
+  const currency = await getCurrency();
   const numberOfUnits = Math.max(0, Number(formData.get("numberOfUnits") || 0));
 
   if (!name || !address || !propertyTypeId) {
@@ -51,6 +52,7 @@ export async function createProperty(formData: FormData) {
       unitNumber: numberOfUnits === 1 ? "Main Unit" : `Unit ${i + 1}`,
       monthlyRent,
       unitType,
+      currency,
     }));
 
     await db.insert(units).values(rows);
@@ -115,11 +117,13 @@ export async function deleteProperty(id: string) {
 }
 
 export async function addUnit(propertyId: string, formData: FormData) {
+  const currency = await getCurrency();
   await db.insert(units).values({
     propertyId,
     unitNumber: String(formData.get("unitNumber") || "New Unit"),
     unitType: String(formData.get("unitType") || "") || null,
     monthlyRent: formData.get("monthlyRent") ? Number(formData.get("monthlyRent")) : null,
+    currency,
   });
   revalidatePath(`/dashboard/properties/${propertyId}`);
 }

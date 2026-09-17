@@ -7,11 +7,12 @@ import { Modal } from "@/components/modal";
 import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createExpense } from "@/app/dashboard/expenses/actions";
 import { EXPENSE_CATEGORIES } from "@/app/dashboard/expenses/constants";
-import { useExpenseCategories } from "@/components/providers";
+import { useCurrency, useExpenseCategories } from "@/components/providers";
 import { FormActions } from "@/components/form-actions";
 
 type ExpenseFormValues = {
   propertyId: string;
+  tenantId?: string;
   category: string;
   amount: number;
   date: string;
@@ -21,7 +22,7 @@ type ExpenseFormValues = {
 const inp = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-colors";
 const lbl = "block text-sm font-medium text-slate-700";
 
-export function NewExpenseForm({ properties }: { properties: { id: string; label: string }[] }) {
+export function NewExpenseForm({ properties, tenants }: { properties: { id: string; label: string }[]; tenants: { id: string; label: string }[] }) {
   const { register, handleSubmit, formState: { errors } } = useForm<ExpenseFormValues>({
     defaultValues: { date: new Date().toISOString().slice(0, 10) },
   });
@@ -29,6 +30,7 @@ export function NewExpenseForm({ properties }: { properties: { id: string; label
   const [receipt, setReceipt] = useState<MediaFile[]>([]);
   const router = useRouter();
   const activeCategories = useExpenseCategories();
+  const currency = useCurrency();
   const categories = EXPENSE_CATEGORIES.filter((c) => activeCategories.includes(c.value));
 
   function onSubmit(data: ExpenseFormValues) {
@@ -52,6 +54,14 @@ export function NewExpenseForm({ properties }: { properties: { id: string; label
         </div>
 
         <div>
+          <label htmlFor="tenantId" className={lbl}>Tenant <span className="font-normal text-slate-400">(optional)</span></label>
+          <select id="tenantId" className={inp} {...register("tenantId")}>
+            <option value="">— None —</option>
+            {tenants.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
+        </div>
+
+        <div>
           <label htmlFor="category" className={lbl}>Category *</label>
           <select id="category" className={inp} {...register("category", { required: "Required" })}>
             <option value="">Select category</option>
@@ -69,7 +79,7 @@ export function NewExpenseForm({ properties }: { properties: { id: string; label
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="amount" className={lbl}>Amount (NGN) *</label>
+            <label htmlFor="amount" className={lbl}>Amount ({currency}) *</label>
             <input id="amount" type="number" min={0.01} step="0.01" className={inp} placeholder="0.00"
               {...register("amount", { required: "Required", valueAsNumber: true, min: { value: 0.01, message: "Must be > 0" } })} />
             {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}

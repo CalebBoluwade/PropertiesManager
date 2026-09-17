@@ -7,6 +7,7 @@ import { Modal } from "@/components/modal";
 import { MediaUpload, type MediaFile } from "@/components/media-upload";
 import { createPayment } from "@/app/dashboard/payments/actions";
 import { FormActions } from "@/components/form-actions";
+import { useCurrency } from "@/components/providers";
 
 type Unit = { id: string; number: string; leases: { id: string; tenantName: string }[] };
 type Property = { id: string; name: string; units: Unit[] };
@@ -30,6 +31,7 @@ export function NewPaymentForm({ properties }: { properties: Property[] }) {
   const [selectedPropertyId, setSelectedPropertyId] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const router = useRouter();
+  const currency = useCurrency();
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
   const selectedUnit = selectedProperty?.units.find((u) => u.id === selectedUnitId);
@@ -82,7 +84,7 @@ export function NewPaymentForm({ properties }: { properties: Property[] }) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="amount" className={lbl}>Amount (NGN) *</label>
+            <label htmlFor="amount" className={lbl}>Amount ({currency}) *</label>
             <input id="amount" type="number" min={0} step="0.01" className={inp} placeholder="0.00"
               {...register("amount", { required: "Required", valueAsNumber: true })} />
             {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}

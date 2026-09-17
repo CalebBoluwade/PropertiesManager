@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { money } from "@/lib/fx";
-import { getDataMode } from "@/lib/data-mode";
+import { getCurrency, getDataMode } from "@/lib/data-mode";
 import { DEMO } from "@/lib/demo-data";
 import { SearchInput } from "@/components/search-input";
 import { SortHeader } from "@/components/sort-header";
@@ -9,11 +9,12 @@ import { Suspense } from "react";
 
 export default async function PropertiesPage({ searchParams }: Readonly<{ searchParams: Promise<{ q?: string; sort?: string; dir?: string }> }>) {
   const { q, sort, dir } = await searchParams;
-  const isDemo = (await getDataMode()) === "demo";
+  const [dataMode, currency] = await Promise.all([getDataMode(), getCurrency()]);
+  const isDemo = dataMode === "demo";
   const allProperties = isDemo
     ? DEMO.properties
     : await db.query.properties.findMany({
-        with: { propertyType: true, units: true },
+        with: { propertyType: true, units: true, expenses: true, obligations: true },
         orderBy: (properties, { desc }) => desc(properties.createdAt),
       });
   const filtered = q
@@ -31,6 +32,15 @@ export default async function PropertiesPage({ searchParams }: Readonly<{ search
     else if (sort === "units") { av = a.units.length; bv = b.units.length; }
     else if (sort === "status") { av = a.status; bv = b.status; }
     else if (sort === "value") { av = Number(a.currentValue ?? 0); bv = Number(b.currentValue ?? 0); }
+    else if (sort === "income") {
+      av = (a as { obligations?: { amountPaid: number }[] }).obligations?.reduce((s, o) => s + o.amountPaid, 0) ?? 0;
+      bv = (b as { obligations?: { amountPaid: number }[] }).obligations?.reduce((s, o) => s + o.amountPaid, 0) ?? 0;
+    }
+    else if (sort === "pl") {
+      const income = (p: typeof a) => (p as { obligations?: { amountPaid: number }[] }).obligations?.reduce((s, o) => s + o.amountPaid, 0) ?? 0;
+      const exp = (p: typeof a) => (p as { expenses?: { amount: number }[] }).expenses?.reduce((s, e) => s + e.amount, 0) ?? 0;
+      av = income(a) - exp(a); bv = income(b) - exp(b);
+    }
     else return 0;
     return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
   });
@@ -65,6 +75,8 @@ export default async function PropertiesPage({ searchParams }: Readonly<{ search
                 <th className="px-5 py-3.5"><Suspense><SortHeader column="units" label="Units" /></Suspense></th>
                 <th className="px-5 py-3.5"><Suspense><SortHeader column="status" label="Status" /></Suspense></th>
                 <th className="px-5 py-3.5"><Suspense><SortHeader column="value" label="Value" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="income" label="Monthly Income" /></Suspense></th>
+                <th className="px-5 py-3.5"><Suspense><SortHeader column="pl" label="P&L" /></Suspense></th>
                 <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
@@ -85,7 +97,21 @@ export default async function PropertiesPage({ searchParams }: Readonly<{ search
                     </span>
                   </td>
                   <td className="px-5 py-4 font-medium text-slate-800">
-                    {money(Number(property.currentValue ?? 0), property.currency)}
+                    {money(Number(property.currentValue ?? 0), currency)}
+                  </td>
+                  <td className="px-5 py-4 text-slate-700">
+                    {(() => {
+                      const income = (property as { obligations?: { amountPaid: number }[] }).obligations?.reduce((s, o) => s + o.amountPaid, 0) ?? 0;
+                      return money(income, currency);
+                    })()}
+                  </td>
+                  <td className="px-5 py-4 font-medium">
+                    {(() => {
+                      const income = (property as { obligations?: { amountPaid: number }[] }).obligations?.reduce((s, o) => s + o.amountPaid, 0) ?? 0;
+                      const exp = (property as { expenses?: { amount: number }[] }).expenses?.reduce((s, e) => s + e.amount, 0) ?? 0;
+                      const pl = income - exp;
+                      return <span className={pl >= 0 ? "text-emerald-600" : "text-red-500"}>{pl >= 0 ? "+" : ""}{money(pl, currency)}</span>;
+                    })()}
                   </td>
                   <td className="px-5 py-4">
                     <Link href={`/dashboard/properties/edit/${property.id}`} className="text-xs text-indigo-500 hover:underline">Edit</Link>
@@ -94,7 +120,7 @@ export default async function PropertiesPage({ searchParams }: Readonly<{ search
               ))}
               {!properties.length && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center text-sm text-slate-400">
+                  <td colSpan={8} className="px-5 py-16 text-center text-sm text-slate-400">
                     No properties yet. <Link href="/dashboard/properties/new" className="text-indigo-500 hover:underline">Add one</Link>.
                   </td>
                 </tr>

@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { CURRENCIES } from "@/lib/fx";
 
 export type DataMode = "demo" | "live";
 
@@ -21,8 +22,20 @@ export async function getCurrency(): Promise<string> {
   return jar.get("currency")?.value ?? "NGN";
 }
 
+/** A currency is selected once for this browser profile and then locked. */
+export async function isCurrencyLocked(): Promise<boolean> {
+  const jar = await cookies();
+  return Boolean(jar.get("currency")?.value);
+}
+
 export async function setCurrency(currency: string) {
   const jar = await cookies();
+  if (jar.get("currency")?.value) {
+    throw new Error("Currency has already been configured and cannot be changed.");
+  }
+  if (!CURRENCIES.some((item) => item.code === currency)) {
+    throw new Error("Select a supported currency.");
+  }
   jar.set("currency", currency, { path: "/", maxAge: 60 * 60 * 24 * 365 });
   revalidatePath("/dashboard", "layout");
 }

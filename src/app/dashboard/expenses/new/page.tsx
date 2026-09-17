@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { X, FileText } from "lucide-react";
 import { createExpense } from "../actions";
 import { EXPENSE_CATEGORIES } from "../constants";
-import { useExpenseCategories } from "@/components/providers";
+import { useCurrency, useExpenseCategories } from "@/components/providers";
 
 type ExpenseFormValues = {
   propertyId: string;
@@ -32,6 +32,7 @@ export default function NewExpensePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const activeCategories = useExpenseCategories();
+  const currency = useCurrency();
   const categories = EXPENSE_CATEGORIES.filter((c) => activeCategories.includes(c.value));
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -95,7 +96,7 @@ export default function NewExpensePage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="amount" className={labelCls}>Amount (NGN) *</label>
+            <label htmlFor="amount" className={labelCls}>Amount ({currency}) *</label>
             <input id="amount" type="number" min={0.01} step="0.01" className={inputCls} placeholder="0.00"
               {...register("amount", { required: "Required", valueAsNumber: true, min: { value: 0.01, message: "Must be > 0" } })} />
             {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
